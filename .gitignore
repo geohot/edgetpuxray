@@ -1,3 +1,5 @@
 .*.swp
 a.out
 data
+*.tflite
+apex_latest_single_ep.bin

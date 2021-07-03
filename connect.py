@@ -94,7 +94,7 @@ def llsend(dev, dat, num):
     ll -= 0x100000
   dev.write(1, dat[off:off+ll])
 
-et = open("/Users/taylor/fun/edgetpu/libcoral/test_data/inception_v4_299_quant_edgetpu.tflite", "rb").read()
+et = open("inception_v4_299_quant_edgetpu.tflite", "rb").read()
 def csend(dev, off, ll, num):
   needle = binascii.unhexlify(off.replace(" ", ""))
   off = et.find(needle)
@@ -104,10 +104,40 @@ def csend(dev, off, ll, num):
   llsend(dev, et[off:off+ll], num)
 
 dev = usb.core.find(idVendor=0x18d1, idProduct=0x9302)
+if dev is None:
+  # download firmware
+  dev = usb.core.find(idVendor=0x1a6e, idProduct=0x089a)
+  if dev is None:
+    raise Exception("U NEED TO BUY GOOGLE CORAL NO FREE BANANA FOR U")
+  print("doing download firmware bro")
+  fw = open("apex_latest_single_ep.bin", "rb").read()
+  cnt = 0
+  for i in range(0, len(fw), 0x100):
+    dev.ctrl_transfer(0x21, 1, cnt, 0, fw[i:i+0x100])
+    ret = dev.ctrl_transfer(0xa1, 3, 0, 0, 6)
+    hexdump(ret)
+    cnt += 1
+  dev.ctrl_transfer(0x21, 1, cnt, 0, "")
+  ret = dev.ctrl_transfer(0xa1, 3, 0, 0, 6)
+  hexdump(ret)
+
+  for i in range(0, 0x81):
+    ret = dev.ctrl_transfer(0xa1, 2, i, 0, 0x100)
+  try: 
+    dev.reset()
+  except usb.core.USBError:
+    print("okay exception")
+  print("downloaded, napping quick bro")
+  time.sleep(3)
+
+  dev = usb.core.find(idVendor=0x18d1, idProduct=0x9302)
 dev.reset()
 time.sleep(0.6)
 usb.util.claim_interface(dev, 0)
 dev.set_configuration(1)
+
+# download firmware
+#open("apex_latest_single_ep.bin")
 
 for s in setup.strip().split("\n"):
   reqType, bReq = s.split("(")[1].split(",")[0:2]
