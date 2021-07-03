@@ -10,7 +10,7 @@ import usb.core
 import usb.util
 from PIL import Image
 
-lbls = open("/Users/taylor/fun/edgetpu/libcoral/test_data/imagenet_labels.txt").read().strip().split("\n")
+lbls = open("imagenet_labels.txt").read().strip().split("\n")
 lbls = [x[6:] for x in lbls]
 
 a = requests.get(sys.argv[1]).content
@@ -80,8 +80,9 @@ libusb_control_transfer(0x40, 1, reg:0x 1a0d8, 0x16f4f2d2c, wLength: 4) : 00 00 
 """
 
 
-def llsend(dev, dat, num):
+def llsend(dev, dat, num, oldoff=-1):
   ll = len(dat)
+  print("sending 0x%x with length 0x%x num %d" % (oldoff, ll, num))
   off = 0
   header = struct.pack("II", ll, num)
   hexdump(header)
@@ -100,8 +101,7 @@ def csend(dev, off, ll, num):
   off = et.find(needle)
   off2 = et.find(needle, off+1)
   assert(off2 == -1)
-  print("sending 0x%x with length 0x%x num %d" % (off, ll, num))
-  llsend(dev, et[off:off+ll], num)
+  llsend(dev, et[off:off+ll], num, off)
 
 dev = usb.core.find(idVendor=0x18d1, idProduct=0x9302)
 if dev is None:
