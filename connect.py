@@ -1,10 +1,28 @@
 #!/usr/bin/env python3
 import time
+import io
+import sys
+import requests
 import struct
 from hexdump import hexdump
 import binascii
 import usb.core
 import usb.util
+from PIL import Image
+
+lbls = open("/Users/taylor/fun/edgetpu/libcoral/test_data/imagenet_labels.txt").read().strip().split("\n")
+lbls = [x[6:] for x in lbls]
+
+a = requests.get(sys.argv[1]).content
+im = Image.open(io.BytesIO(a))
+im = im.resize((299, 299))
+pixels = list(im.getdata())
+out = []
+for p in pixels:
+  out += p
+image_pixels = bytes(out)
+
+
 #libusb_control_transfer(0x80, 6, reg:0x   100, 0x16bb36bae, wLength: 18) : 12 01 10 03 00 00 00 09 d1 18 02 93 00 01 00 00 00 01   
 setup = """
 libusb_control_transfer(0xc0, 1, reg:0x 1a30c, 0x16f4f2c0c, wLength: 4) : 01 00 6a b7
@@ -61,6 +79,21 @@ libusb_control_transfer(0xc0, 1, reg:0x 1a0d8, 0x16f4f2bfc, wLength: 4) : 01 00 
 libusb_control_transfer(0x40, 1, reg:0x 1a0d8, 0x16f4f2d2c, wLength: 4) : 00 00 00 80
 """
 
+
+def llsend(dev, dat, num):
+  ll = len(dat)
+  off = 0
+  header = struct.pack("II", ll, num)
+  hexdump(header)
+  dev.write(1, header)
+  while ll > 0x100000:
+    bdat = dat[off:off+0x100000]
+    #hexdump(bdat[0:0x10])
+    dev.write(1, bdat)
+    off += 0x100000
+    ll -= 0x100000
+  dev.write(1, dat[off:off+ll])
+
 et = open("/Users/taylor/fun/edgetpu/libcoral/test_data/inception_v4_299_quant_edgetpu.tflite", "rb").read()
 def csend(dev, off, ll, num):
   needle = binascii.unhexlify(off.replace(" ", ""))
@@ -68,18 +101,11 @@ def csend(dev, off, ll, num):
   off2 = et.find(needle, off+1)
   assert(off2 == -1)
   print("sending 0x%x with length 0x%x num %d" % (off, ll, num))
-  header = struct.pack("II", ll, num)
-  hexdump(header)
-  dev.write(1, header)
-  while ll > 0x100000:
-    bdat = et[off:off+0x100000]
-    #hexdump(bdat[0:0x10])
-    dev.write(1, bdat)
-    off += 0x100000
-    ll -= 0x100000
-  dev.write(1, et[off:off+ll])
+  llsend(dev, et[off:off+ll], num)
 
 dev = usb.core.find(idVendor=0x18d1, idProduct=0x9302)
+dev.reset()
+time.sleep(0.6)
 usb.util.claim_interface(dev, 0)
 dev.set_configuration(1)
 
@@ -97,16 +123,34 @@ for s in setup.strip().split("\n"):
   ret = dev.ctrl_transfer(reqType, bReq, wVal, wIndex, data)
   print(hex(reqType), bReq, hex(regnum), data, ret)
 
+# run 1
 csend(dev, "80 0f 00 ac 05 00 00 00 00 00 00 00 00 00 00 00 80 f6 ff 0f 00 f8 ff 7f 00 80 ff 01 00 08 00 00", 0x16d0, 0)
 csend(dev, "d8 cb ff ff db c8 ff ff 14 0e 00 00 19 0e 00 00 65 0b 00 00 b8 39 00 00 d4 d9 ff ff ac cc ff ff", 0x607500, 2)
-#csend(dev, et.find(binascii.unhexlify("80 0f 00 00 ff 00 00 00 00 00 00 00 00 00 00 00 80 f6 ff 0f 00 f0 ff 7f 00 80 ff 01".replace(" ", ""))), 0x3fc20, 0)
-
-#print(dev)
-print("read")
 dat = dev.read(0x82, 0x10, timeout=6000)
 hexdump(dat)
 
-dev.reset()
+# run 2
+csend(dev, "80 0f 00 00 ff 00 00 00 00 00 00 00 00 00 00 00 80 f6 ff 0f 00 f0 ff 7f 00 80 ff 01 00 08 00 00", 0x3fc20, 0)
+llsend(dev, image_pixels+b"\x00\x00\x00\x00\x00", 1)
+#llsend(dev, open("data/banana.dat", "rb").read()+b"\x00\x00\x00\x00\x00", 1)
+csend(dev, "cd f8 ff ff 6b e3 ff ff 35 11 00 00 ac e6 ff ff b7 ea ff ff 0e 09 00 00 5a ec ff ff 60 31 00 00", 0x448d80, 2)
+csend(dev, "80 0f 00 dc fe 00 00 00 00 00 00 00 00 00 00 00 80 f6 ff 6f 7f 00 00 00 00 80 ff 01 00 00 00 00", 0x3fb90, 0)
+csend(dev, "42 03 00 00 b9 0d 00 00 fc fb ff ff f3 03 00 00 88 04 00 00 b7 ef ff ff 53 fe ff ff a4 0e 00 00", 0x14c7100, 2)
+csend(dev, "80 0f 00 70 51 00 00 00 00 00 00 00 00 00 00 00 80 f6 ff 0f fa 00 00 00 00 80 ff 01 00 00 00 00", 0x145e0, 0)
+csend(dev, "5d ff ff ff 04 fd ff ff bb fc ff ff b1 fd ff ff 59 fe ff ff 84 ff ff ff d3 fe ff ff 6d 00 00 00", 0xb12100, 2)
+dat = dev.read(0x82, 0x10, timeout=6000)
+hexdump(dat)
+
+dat = dev.read(0x81, 0x400, timeout=6000)
+aa = []
+for i in range(len(lbls)):
+  if dat[i] > 0:
+    aa.append((dat[i], lbls[i]))
+for x in sorted(aa, reverse=True):
+  print(x[0], x[1])
+
+#hexdump(dat)
+
 
 #print(dev)
 
