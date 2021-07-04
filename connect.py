@@ -10,9 +10,12 @@ import usb.core
 import usb.util
 from PIL import Image
 
-lbls = open("imagenet_labels.txt").read().strip().split("\n")
+lbls = open("needz/imagenet_labels.txt").read().strip().split("\n")
 lbls = [x[6:] for x in lbls]
 
+if len(sys.argv) <= 1:
+  print("Give me an image to check you doofis!")
+  exit()
 a = requests.get(sys.argv[1]).content
 im = Image.open(io.BytesIO(a))
 im = im.resize((299, 299))
@@ -95,7 +98,7 @@ def llsend(dev, dat, num, oldoff=-1):
     ll -= 0x100000
   dev.write(1, dat[off:off+ll])
 
-et = open("inception_v4_299_quant_edgetpu.tflite", "rb").read()
+et = open("needz/inception_v4_299_quant_edgetpu.tflite", "rb").read()
 def csend(dev, off, ll, num):
   needle = binascii.unhexlify(off.replace(" ", ""))
   off = et.find(needle)
@@ -110,7 +113,7 @@ if dev is None:
   if dev is None:
     raise Exception("U NEED TO BUY GOOGLE CORAL NO FREE BANANA FOR U")
   print("doing download firmware bro")
-  fw = open("apex_latest_single_ep.bin", "rb").read()
+  fw = open("needz/apex_latest_single_ep.bin", "rb").read()
   cnt = 0
   for i in range(0, len(fw), 0x100):
     dev.ctrl_transfer(0x21, 1, cnt, 0, fw[i:i+0x100])

@@ -4,3 +4,4 @@ data
 *.tflite
 apex_latest_single_ep.bin
 imagenet_labels.txt
+needz/
