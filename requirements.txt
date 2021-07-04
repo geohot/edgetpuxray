@@ -1,0 +1,4 @@
+	hexdump
+  usb
+ requests
+    pillow
