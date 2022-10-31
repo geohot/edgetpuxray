@@ -56,8 +56,8 @@ int libusb_submit_transfer(struct libusb_transfer *ptr) {
 }
 
 int main(int argc, char* argv[]) {
-  //std::string model_file_name = "/Users/kafka/fun/edgetpuxray/inception_v4_299_quant_edgetpu.tflite";
-  std::string model_file_name = "/Users/kafka/fun/edgetpuxray/compile/model.tflite";
+  std::string model_file_name = "/Users/kafka/fun/edgetpuxray/inception_v4_299_quant_edgetpu.tflite";
+  //std::string model_file_name = "/Users/kafka/fun/edgetpuxray/compile/model.tflite";
   auto tpu_context = edgetpu::EdgeTpuManager::GetSingleton()->OpenDevice();
   printf("opened device\n");
 
@@ -81,18 +81,19 @@ int main(int argc, char* argv[]) {
   printf("inputs: %lu outputs: %lu\n", interpreter->inputs().size(), interpreter->outputs().size());
   printf("in[0]: %s  out[0]: %s\n", interpreter->GetInputName(0), interpreter->GetOutputName(0));
 
-  auto *input = interpreter->typed_input_tensor<uint8_t>(0);
+  /*auto *input = interpreter->typed_input_tensor<uint8_t>(0);
   assert(input != NULL);
-  input[0] = 10;
+  input[0] = 10;*/
 
   // load banana
-  /*auto *input = interpreter->typed_input_tensor<uint8_t>(0);
+  auto *input = interpreter->typed_input_tensor<uint8_t>(0);
   assert(input != NULL);
 
   FILE *f = fopen(argv[1], "rb");
+  assert(f);
   int len = fread(input, 1, 299*299*3, f);
   printf("read 0x%x\n", len);
-  fclose(f);*/
+  fclose(f);
 
   interpreter->Invoke();
   printf("ran model (again)\n");
@@ -102,14 +103,8 @@ int main(int argc, char* argv[]) {
   const auto *const output = interpreter->typed_output_tensor<uint8_t>(0);
   assert(output != NULL);
   printf("output ptr: %p\n", output);
-  const auto outputSize = 1;
-  for (auto c=0u; c<outputSize; ++c) { if (output[c] > 0) printf("%d: %d\n", c, output[c]); }
-
-  /*const auto *const output = interpreter->typed_output_tensor<uint8_t>(0);
-  assert(output != NULL);
-  printf("output ptr: %p\n", output);
   const auto outputSize = 1000;
-  for (auto c=0u; c<outputSize; ++c) { if (output[c] > 0) printf("%d: %d\n", c, output[c]); }*/
+  for (auto c=0u; c<outputSize; ++c) { if (output[c] > 0) printf("%d: %d\n", c, output[c]); }
 
   //cv::Mat img = cv::imread("banana.jpg", cv::IMREAD_GRAYSCALE);
 

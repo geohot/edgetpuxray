@@ -17,3 +17,10 @@ wget https://github.com/google-coral/test_data/raw/c21de4450f88a20ac5968628d3757
 
 ./connect.py https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Bananas.jpg/1600px-Bananas.jpg
 
+== Running with tflite ==
+
+# must use tf version a4dfb8d1a71385bd6d122e4f27f86dcebb96712d
+wget https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Bananas.jpg/1600px-Bananas.jpg
+./read.py 1600px-Bananas.jpg
+mkdir -p data && mv 1600px-Bananas.dat data/banana.dat
+./build.sh
