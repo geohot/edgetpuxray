@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
   printf("inputs: %lu outputs: %lu\n", interpreter->inputs().size(), interpreter->outputs().size());
   printf("in[0]: %s  out[0]: %s\n", interpreter->GetInputName(0), interpreter->GetOutputName(0));
 
-  auto *input = interpreter->typed_input_tensor<int8_t>(0);
+  auto *input = interpreter->typed_input_tensor<uint8_t>(0);
   assert(input != NULL);
   input[0] = 10;
 
@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
 
   //TfLiteTensor *tens = interpreter->output_tensor(0);
 
-  const auto *const output = interpreter->typed_output_tensor<int8_t>(0);
+  const auto *const output = interpreter->typed_output_tensor<uint8_t>(0);
   assert(output != NULL);
   printf("output ptr: %p\n", output);
   const auto outputSize = 1;
