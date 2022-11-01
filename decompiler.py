@@ -5,10 +5,11 @@ from hexdump import hexdump
 from construct import BitStruct, BitsInteger
 from collections import defaultdict
 
-dat = open("programs/div2_8.coral", "rb").read()
+dat = open("programs/div2_10.coral", "rb").read()
 
 # CORAL NOTES
 # 32 scalar registers, 32-bits?
+# 8 predicate registers
 
 #def fix(y):
 #  return bytes([int("0x"+x, 16) for x in y.split()])
@@ -21,8 +22,9 @@ ins = BitStruct(
   "s_y" / BitsInteger(5),
   "s_x" / BitsInteger(5),
   "s_op" / BitsInteger(6),
-  "s_reg" / BitsInteger(5),
-  "imm_size" / BitsInteger(27),
+  "vs_reg" / BitsInteger(5),
+  "imm_offset" / BitsInteger(13),
+  "imm_size" / BitsInteger(14),
   "prefix" / BitsInteger(22),
 )
 # TODO: can assert that it's 128?
@@ -107,15 +109,48 @@ prog += mins(prefix=0x800, s_op=UNK, s_x=0, s_y=0xc, imm_scalar=0xb)
 #prog += mins(prefix=0x800, s_op=UNK, s_x=3, s_y=0xc, imm_scalar=0x13371338)
 #prog += mins(prefix=0x800, s_op=UNK, s_x=4, s_y=0xc, imm_scalar=0xa3371338)
 
-#prog = mdat[0x7b:0xad]
 #prog = mdat[0xaa:0xad]
 #prog += mdat[0x8a:0x8f]
 
-# send status response (imm_scalar can be changed within a small range)
-prog += mins(prefix=0x800, s_reg=8, imm_size=0x9400)
-prog += mins(prefix=0x800, s_op=MOVI, s_x=0x15, imm_scalar=5)
-prog += mins(prefix=0x800, s_reg=0x15, imm_size=0xd400)
+# send status response (EP 2)
+prog += mins(prefix=0x800, s_op=MOVI, s_x=6, imm_scalar=0xccdd3333)
+prog += mins(prefix=0x800, s_op=MOVI, s_x=7, imm_scalar=0x13371337)
+prog += mins(prefix=0x800, s_op=MOVI, s_x=8, imm_scalar=0xaabbccdd)
+prog += mins(prefix=0x800, s_op=MOVI, s_x=9, imm_scalar=5)  # this one has a small range
+prog += mins(prefix=0x800, vs_reg=6, imm_size=0x1400)
+prog += mins(prefix=0x800, vs_reg=7, imm_size=0x1400, imm_offset=1)
+prog += mins(prefix=0x800, vs_reg=8, imm_size=0x1400, imm_offset=2)
+prog += mins(prefix=0x800, vs_reg=9, imm_size=0x1400, imm_offset=3)
 prog += mins(prefix=0x800, imm_size=0x1800)
+
+# send "output tensor" (EP 1)
+# 73 F5 DB FD
+prog += mins(prefix=0x14c0, vs_reg=2, s_y=0x18, imm_scalar=0x2000100) #, unk_3=0x3fffe00)
+prog += mins(prefix=0x3f0000, imm_size=0x7ff, vs_reg=0x1f, s_op=0x3f, s_x=0x1f, s_y=1, imm_scalar=0x1ffff000) #, unk_3=0x3ffe000)
+prog += mins(prefix=0x10000f, imm_scalar=0x840f000)
+prog += mins() #prog += mins(unk_3=0x28)
+prog += mins(imm_size=0x600) #, imm_offset=0x1f98, vs_reg=0x1f, s_op=0x3f, imm_scalar=0x60)
+prog += mins()
+prog += mins()  # extra NOP lets you move into scalar 8 early
+
+# TODO: wtf, why can't I move into scalar 8 early
+prog += mins(prefix=0x800, s_op=MOVI, s_x=6, imm_scalar=0)
+prog += mins(prefix=0x800, s_op=MOVI, s_x=7, imm_scalar=0)
+prog += mins(prefix=0x800, s_op=MOVI, s_x=8, imm_scalar=0x10)  # output length (8 for 8)
+prog += mins(prefix=0x800, s_op=MOVI, s_x=9, imm_scalar=3)
+prog += mins(prefix=0x800, vs_reg=6, imm_size=0x1400)
+prog += mins(prefix=0x800, vs_reg=7, imm_size=0x1400, imm_offset=1)
+prog += mins(prefix=0x800, vs_reg=8, imm_size=0x1400, imm_offset=2)
+prog += mins(prefix=0x800, vs_reg=9, imm_size=0x1400, imm_offset=3)
+prog += mins(prefix=0x800, imm_size=0x1800)
+
+# bottom part
+prog += mins(prefix=0x9c0, imm_offset=0x80)   #prog += mins(prefix=0x9c0, imm_size=0x20) (for 8)
+prog += mins(imm_scalar=0x7f000000)   #prog += mins(imm_offset=0x600, imm_scalar=0x7f000000)
+prog += mins(prefix=0x1400, imm_offset=0x400, vs_reg=2, s_x=0x18, s_y=3, imm_scalar=0x108)
+prog += mins()   #prog += mins(imm_scalar=0x51000)
+prog += mins()   #prog += mins(imm_scalar=0xa2a600, unk_3=0x1000100)
+prog += mins(prefix=0xad, imm_size=2, imm_offset=8, imm_scalar=0x20000000)
 
 # add start at the end
 prog =  mins(prefix=0xf80, imm_size=(len(prog)+1)*0x10) + prog  # start

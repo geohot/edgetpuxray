@@ -196,7 +196,7 @@ if __name__ == "__main__":
   llsend(dev, prog, 0)
 
   # set a breakpoint
-  #write_register(dev, 'scalarCoreBreakPoint', q((0x80//0x10) << 1 | 1))
+  #write_register(dev, 'scalarCoreBreakPoint', q((0x130//0x10) << 1 | 1))
   #read_register(dev, 'instruction_queue_int_status', 8)
   #write_register(dev, 'currentPc', q(21))
   #read_register(dev, 'currentPc', 8)
