@@ -90,7 +90,8 @@ def llsend(dev, dat, num, oldoff=-1):
   header = struct.pack("II", ll, num)
   hexdump(header)
   dev.write(1, header)
-  hexdump(dat[:0x20])
+  if num == 0:
+    hexdump(dat[:0x100])
   while ll > 0x100000:
     bdat = dat[off:off+0x100000]
     #hexdump(bdat[0:0x10])
