@@ -27,8 +27,8 @@ def representative_dataset():
 # Convert the model.
 root = tf.train.Checkpoint()
 #root.f = tf.function(lambda x: tf.nn.relu(x))
-root.f = tf.function(lambda x: 2*x)
-input_data = tf.constant(1., shape=[1, 1])
+root.f = tf.function(lambda x: tf.nn.relu(x))
+input_data = tf.constant(1., shape=[4])
 to_save = root.f.get_concrete_function(input_data)
 
 converter = tf.lite.TFLiteConverter.from_concrete_functions([to_save])
