@@ -217,7 +217,7 @@ if __name__ == "__main__":
 
   # program gets to pc:66 waiting for data
   read_pc(dev)
-  llsend(dev, b"\xc0\x80\x40\x20\xc0\x80\x04\x02", 1)
+  llsend(dev, b"\xc0\x80\x40\x20\xc0\x80\x04\x08", 1)
   read_pc(dev)
 
   # halt the core and dump the registers
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     read_register(dev, 'predicateRegisterFile', 8, offset=i)
 
   print("getting status response")
-  dat = dev.read(0x82, 0x10, timeout=6000)
+  dat = dev.read(0x82, 0x400, timeout=6000)
   hexdump(dat)
   read_register(dev, 'currentPc', 8)
 
