@@ -85,7 +85,7 @@ DescriptorTag = ['kInstructions', 'kInputActivations', 'kParameters', 'kOutputAc
 
 def llsend(dev, dat, num, oldoff=-1):
   ll = len(dat)
-  print("sending 0x%x with length 0x%x num %d %s" % (oldoff, ll, num, DescriptorTag[num]))
+  print("sending 0x%x with length 0x%x (%.2fM) num %d %s" % (oldoff, ll, ll/(1024*1024), num, DescriptorTag[num]))
   off = 0
   header = struct.pack("II", ll, num)
   hexdump(header)
