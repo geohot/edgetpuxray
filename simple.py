@@ -233,8 +233,10 @@ if __name__ == "__main__":
   hexdump(dat)
   read_register(dev, 'currentPc', 8)
 
+  """
   print("getting output tensor")
   dat = dev.read(0x81, 0x400, timeout=6000)
   hexdump(dat)
   read_register(dev, 'currentPc', 8)
+  """
   read_register(dev, 'scalarCoreRunStatus', 8)

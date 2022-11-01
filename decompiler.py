@@ -5,7 +5,9 @@ from hexdump import hexdump
 from construct import BitStruct, BitsInteger
 from collections import defaultdict
 
-dat = open("programs/div2_10.coral", "rb").read()
+dat = open("programs/div2_20.coral", "rb").read()
+#dat = open("programs/weight_copy_in_0x80.coral", "rb").read()
+#dat = open("programs/dense_1_8_mul.coral", "rb").read()
 
 # CORAL NOTES
 # 32 scalar registers, 32-bits?
@@ -23,9 +25,13 @@ ins = BitStruct(
   "s_x" / BitsInteger(5),
   "s_op" / BitsInteger(6),
   "vs_reg" / BitsInteger(5),
-  "imm_offset" / BitsInteger(13),
-  "imm_size" / BitsInteger(14),
-  "prefix" / BitsInteger(22),
+  "v_offset" / BitsInteger(13),
+  "v_op" / BitsInteger(4),
+  "imm_size" / BitsInteger(10),
+  "prefix" / BitsInteger(17),
+  "yes_pred" / BitsInteger(1),
+  "pred_reg" / BitsInteger(3),
+  "gate" / BitsInteger(1),  # run if *pred_reg == 0
 )
 # TODO: can assert that it's 128?
 assert ins.sizeof() == 16
@@ -37,8 +43,15 @@ def dec(my_dat, off=-1):
   prt = []
   for k,v in list(dd.items())[::-1]:
     if k == "_io": continue
-    prt.append("%12s:%8x" % (k,v))
-  print(f"{off:4X}" + ','.join(prt))
+    if k not in ['gate', 'pred_reg', 'yes_pred']:
+      prt.append("%8s:%8x" % (k,v))
+  pp = ""
+  if dd['gate']:
+    if not dd['yes_pred']:
+      pp += "!"
+    pp += str(dd['pred_reg'])
+
+  print(f"{off:4X} {pp:4s}" + ','.join(prt))
 
 mdat = []
 for i in range(0, len(dat), 0x10):
@@ -66,9 +79,11 @@ for i in range(0, len(dat), 0x10):
     break
 """
 
+template = ins.parse(dat[0:0x10])
 def mins(**kwargs):
   ret = defaultdict(lambda: 0)
   for k,v in kwargs.items():
+    assert k in template
     ret[k] = v
   return [ins.build(ret)[::-1]]
 
@@ -76,7 +91,9 @@ def mins(**kwargs):
 
 # drop the 0x20 and use reg[imm_scalar] instead
 ADD = 0x1     # s_x <- s_y + s[imm_scalar]
-UNK = 2
+SUB = 0x2
+EQ = 0x9
+NEQ = 0xA
 
 # math
 ADDI = 0x21   # s_x <- s_y + imm_scalar
@@ -99,11 +116,40 @@ GESI = 0x2E   # pred(s_x) <- s_y >= imm_scalar (unsigned)
 # movement
 MOVI = 0x2f   # s_x <- imm_scalar
 
+# 0x800 in the prefix mean imm_scalar should go on the bus
+
 print("my program")
 prog = []
-prog += mins(prefix=0x800, s_op=MOVI, s_x=0xb, imm_scalar=0xabab)
-prog += mins(prefix=0x800, s_op=MOVI, s_x=0xc, imm_scalar=0x13371337)
-prog += mins(prefix=0x800, s_op=UNK, s_x=0, s_y=0xc, imm_scalar=0xb)
+prog += mins(prefix=0x40, s_op=MOVI, s_x=0xb, imm_scalar=0xabab)
+#prog += mins(prefix=0x10, s_op=MOVI, s_x=0xc, imm_scalar=0x13371337)
+#prog += mins(prefix=0x10, s_op=SUB, s_x=2, s_y=0xc, imm_scalar=0xb)
+
+#for i in range(4, 8): prog += mins(prefix=0x800, s_op=EQ, s_x=i, s_y=0, imm_scalar=0)
+prog += mins(prefix=0x40, s_op=EQ, s_x=2, s_y=0, imm_scalar=0)
+prog += mins(prefix=0x40, s_op=EQ, s_x=4, s_y=0, imm_scalar=0)
+prog += mins(prefix=0x40, s_op=EQ, s_x=5, s_y=0, imm_scalar=0)
+prog += mins(prefix=0x40, s_op=EQ, s_x=7, s_y=0, imm_scalar=0)
+
+"""
+prog += mins(prefix=0x20, run_flag=0, pred_reg=1, s_op=MOVI, s_x=0x10, imm_scalar=0xcafebabe)
+prog += mins(prefix=0x20, run_flag=1, pred_reg=1, s_op=MOVI, s_x=0x11, imm_scalar=0xcafebabe)  # run if preg_reg == 0
+prog += mins(prefix=0x20, run_flag=2, pred_reg=1, s_op=MOVI, s_x=0x12, imm_scalar=0xcafebabe)
+prog += mins(prefix=0x20, run_flag=3, pred_reg=1, s_op=MOVI, s_x=0x13, imm_scalar=0xcafebabe)  # run if pred_reg == 1
+prog += mins(prefix=0x20, run_flag=0, pred_reg=2, s_op=MOVI, s_x=0x14, imm_scalar=0xcafebabe)
+prog += mins(prefix=0x20, run_flag=1, pred_reg=2, s_op=MOVI, s_x=0x15, imm_scalar=0xcafebabe)  # run if preg_reg == 1
+prog += mins(prefix=0x20, run_flag=2, pred_reg=2, s_op=MOVI, s_x=0x16, imm_scalar=0xcafebabe)
+prog += mins(prefix=0x20, run_flag=3, pred_reg=2, s_op=MOVI, s_x=0x17, imm_scalar=0xcafebabe)  # run if preg_reg == 0
+"""
+
+prog += mins(prefix=0x40, gate=1, pred_reg=0, yes_pred=1, s_op=MOVI, s_x=0x10, imm_scalar=0xcafebabe)
+prog += mins(prefix=0x40, gate=1, pred_reg=1, yes_pred=1, s_op=MOVI, s_x=0x11, imm_scalar=0xcafebabe)
+prog += mins(prefix=0x40, gate=1, pred_reg=2, yes_pred=1, s_op=MOVI, s_x=0x12, imm_scalar=0xcafebabe)
+prog += mins(prefix=0x40, gate=1, pred_reg=3, yes_pred=1, s_op=MOVI, s_x=0x13, imm_scalar=0xcafebabe)
+prog += mins(prefix=0x40, gate=1, pred_reg=4, yes_pred=0, s_op=MOVI, s_x=0x14, imm_scalar=0xcafebabe)
+prog += mins(prefix=0x40, gate=1, pred_reg=5, yes_pred=0, s_op=MOVI, s_x=0x15, imm_scalar=0xcafebabe)
+prog += mins(prefix=0x40, gate=1, pred_reg=6, yes_pred=0, s_op=MOVI, s_x=0x16, imm_scalar=0xcafebabe)
+prog += mins(prefix=0x40, gate=1, pred_reg=7, yes_pred=0, s_op=MOVI, s_x=0x17, imm_scalar=0xcafebabe)
+
 #prog += mins(prefix=0x800, s_op=UNK, s_x=1, s_y=0xc, imm_scalar=0x13371336)
 #prog += mins(prefix=0x800, s_op=UNK, s_x=2, s_y=0xc, imm_scalar=0x13371337)
 #prog += mins(prefix=0x800, s_op=UNK, s_x=3, s_y=0xc, imm_scalar=0x13371338)
@@ -112,21 +158,24 @@ prog += mins(prefix=0x800, s_op=UNK, s_x=0, s_y=0xc, imm_scalar=0xb)
 #prog = mdat[0xaa:0xad]
 #prog += mdat[0x8a:0x8f]
 
-# send status response (EP 2)
-prog += mins(prefix=0x800, s_op=MOVI, s_x=6, imm_scalar=0xccdd3333)
-prog += mins(prefix=0x800, s_op=MOVI, s_x=7, imm_scalar=0x13371337)
-prog += mins(prefix=0x800, s_op=MOVI, s_x=8, imm_scalar=0xaabbccdd)
-prog += mins(prefix=0x800, s_op=MOVI, s_x=9, imm_scalar=5)  # this one has a small range
-prog += mins(prefix=0x800, vs_reg=6, imm_size=0x1400)
-prog += mins(prefix=0x800, vs_reg=7, imm_size=0x1400, imm_offset=1)
-prog += mins(prefix=0x800, vs_reg=8, imm_size=0x1400, imm_offset=2)
-prog += mins(prefix=0x800, vs_reg=9, imm_size=0x1400, imm_offset=3)
-prog += mins(prefix=0x800, imm_size=0x1800)
+#prog += mins(prefix=0x10, s_op=MOVI, s_x=6, imm_scalar=0xccdd3333)
+#prog += mins(prefix=0x10, s_op=MOVI, s_x=7, imm_scalar=0x13371337)
+#prog += mins(prefix=0x10, s_op=MOVI, s_x=8, imm_scalar=0xaabbccdd)
+
+# without 0x800 these instructions don't work
+#prog += mins(prefix=0x10, vs_reg=6, v_op=5, imm_offset=0)
+#prog += mins(prefix=0x10, vs_reg=7, v_op=5, imm_offset=1)
+#prog += mins(prefix=0x10, vs_reg=8, v_op=5, imm_offset=2)
+
+prog += mins(prefix=0x40, s_op=MOVI, s_x=9, imm_scalar=4)  # this one has a small range
+prog += mins(prefix=0x40, vs_reg=9, v_op=5, v_offset=3)
+prog += mins(prefix=0x40, v_op=6)
 
 # send "output tensor" (EP 1)
-# 73 F5 DB FD
-prog += mins(prefix=0x14c0, vs_reg=2, s_y=0x18, imm_scalar=0x2000100) #, unk_3=0x3fffe00)
-prog += mins(prefix=0x3f0000, imm_size=0x7ff, vs_reg=0x1f, s_op=0x3f, s_x=0x1f, s_y=1, imm_scalar=0x1ffff000) #, unk_3=0x3ffe000)
+"""
+# very confusing
+prog += mins(prefix=0x14c0, vs_reg=2, s_y=0x18, imm_scalar=0xe000100) #, unk_3=0x3fffe00)
+prog += mins(prefix=0x390000, imm_size=0x7ff, vs_reg=0x19, s_op=0x3f, s_x=0x1f, s_y=1, imm_scalar=0x1fff9000) #, unk_3=0x3ffe000)
 prog += mins(prefix=0x10000f, imm_scalar=0x840f000)
 prog += mins() #prog += mins(unk_3=0x28)
 prog += mins(imm_size=0x600) #, imm_offset=0x1f98, vs_reg=0x1f, s_op=0x3f, imm_scalar=0x60)
@@ -136,7 +185,7 @@ prog += mins()  # extra NOP lets you move into scalar 8 early
 # TODO: wtf, why can't I move into scalar 8 early
 prog += mins(prefix=0x800, s_op=MOVI, s_x=6, imm_scalar=0)
 prog += mins(prefix=0x800, s_op=MOVI, s_x=7, imm_scalar=0)
-prog += mins(prefix=0x800, s_op=MOVI, s_x=8, imm_scalar=0x10)  # output length (8 for 8)
+prog += mins(prefix=0x800, s_op=MOVI, s_x=8, imm_scalar=0x18)  # output length (8 for 8)
 prog += mins(prefix=0x800, s_op=MOVI, s_x=9, imm_scalar=3)
 prog += mins(prefix=0x800, vs_reg=6, imm_size=0x1400)
 prog += mins(prefix=0x800, vs_reg=7, imm_size=0x1400, imm_offset=1)
@@ -145,19 +194,24 @@ prog += mins(prefix=0x800, vs_reg=9, imm_size=0x1400, imm_offset=3)
 prog += mins(prefix=0x800, imm_size=0x1800)
 
 # bottom part
-prog += mins(prefix=0x9c0, imm_offset=0x80)   #prog += mins(prefix=0x9c0, imm_size=0x20) (for 8)
+# this has to length for output length
+prog += mins(prefix=0x9c0, imm_offset=0x180)   #prog += mins(prefix=0x9c0, imm_size=0x20) (for 8)
 prog += mins(imm_scalar=0x7f000000)   #prog += mins(imm_offset=0x600, imm_scalar=0x7f000000)
 prog += mins(prefix=0x1400, imm_offset=0x400, vs_reg=2, s_x=0x18, s_y=3, imm_scalar=0x108)
 prog += mins()   #prog += mins(imm_scalar=0x51000)
 prog += mins()   #prog += mins(imm_scalar=0xa2a600, unk_3=0x1000100)
 prog += mins(prefix=0xad, imm_size=2, imm_offset=8, imm_scalar=0x20000000)
+"""
 
 # add start at the end
-prog =  mins(prefix=0xf80, imm_size=(len(prog)+1)*0x10) + prog  # start
-prog += mins(prefix=0x10840) # halt
-prog += mins(prefix=0xfc0, imm_size=0x10)  # end
+prog =  mins(prefix=0xf80>>5, imm_size=(len(prog)+1)*0x10) + prog  # start
+prog += mins(prefix=0x10840>>5) # halt
+prog += mins(prefix=0xfc0>>5, imm_size=0x10)  # end
 prog = b''.join(prog)
 hexdump(prog)
+
+for i in range(0, len(prog), 0x10):
+  dec(prog[i:i+0x10], i)
 
 #prog = dat
 

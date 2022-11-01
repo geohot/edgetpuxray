@@ -71,11 +71,11 @@ def print_field_offset(x):
 for i in range(dat.SerializedExecutablesLength()):
   print(i)
   se = Executable.GetRootAs(dat.SerializedExecutables(i))
-  print(se.InstructionBitstreamsLength(), se.SerializedModelLength(), hex(se.ParametersLength()))
+  print(se.InstructionBitstreamsLength(), se.SerializedModelLength(), "parameters length", hex(se.ParametersLength()))
   for j in range(se.InstructionBitstreamsLength()):
     see = se.InstructionBitstreams(j)
     #print(dir(see))
     print(hex(see.BitstreamLength()), see.BitstreamLength(), [print_field_offset(see.FieldOffsets(i)) for i in range(see.FieldOffsetsLength())])
     hexdump(see.BitstreamAsNumpy()[0:0x20])
-    with open("/tmp/prog", "wb") as f:
+    with open(f"/tmp/prog_{i}_{j}", "wb") as f:
       f.write(see.BitstreamAsNumpy())
