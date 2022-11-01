@@ -6,6 +6,9 @@ from hexdump import hexdump
 import struct
 import binascii
 
+def q(x):
+  return struct.pack("Q", x)
+
 # may download firmware
 def open_device():
   dev = usb.core.find(idVendor=0x18d1, idProduct=0x9302)
@@ -44,6 +47,7 @@ def open_device():
 
 regs = [x.strip().split(' // NOLINT: ') for x in open("beagle_csr_offsets.h").read().split("\n") if ' // NOLINT: ' in x]
 regs = {int(x.strip(' ,'),16):y for x,y in regs}
+iregs = {y:x for x,y in regs.items()}
 
 def llsend(dev, dat, num):
   ll = len(dat)
@@ -61,16 +65,6 @@ def llsend(dev, dat, num):
   dev.write(1, dat[off:off+ll])
 
 setup = """
-libusb_control_transfer(0x40, 1, reg:0x 1a30c, 0x16f4f2d3c, wLength: 4) : 59 00 0f 00
-libusb_control_transfer(0x40, 1, reg:0x 1a318, 0x16f4f2cfc, wLength: 4) : 5c 02 85 50
-libusb_control_transfer(0x40, 0, reg:0x 4a000, 0x16f4f2cf8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 48788, 0x16f4f2cf8, wLength: 8) : 7f 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 40020, 0x16f4f2cf8, wLength: 8) : 02 1e 00 00 00 00 00 00
-libusb_control_transfer(0x40, 1, reg:0x 1a314, 0x16f4f2d4c, wLength: 4) : 00 00 15 00
-libusb_control_transfer(0x40, 0, reg:0x 4c148, 0x16f4f2c08, wLength: 8) : f0 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 4c160, 0x16f4f2c08, wLength: 8) : 00 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 4c058, 0x16f4f2c08, wLength: 8) : 80 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 44018, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 44158, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 44198, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 441d8, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
@@ -101,9 +95,41 @@ libusb_control_transfer(0x40, 1, reg:0x 1a658, 0x16f4f2d4c, wLength: 4) : 03 00 
 libusb_control_transfer(0x40, 1, reg:0x 1a0d8, 0x16f4f2d2c, wLength: 4) : 00 00 00 80
 """
 
+def write_register(dev, name, data):
+  regnum = iregs[name]
+  bReq = int(regnum>>16 == 1)
+  print(f"writing {name:30s} {bReq} 0x{regnum:X} with {len(data)} bytes")
+  ret = dev.ctrl_transfer(0x40, bReq, regnum & 0xFFFF, regnum >> 16, data)
+
+def read_register(dev, name, llen, offset=0, debug=True):
+  regnum = iregs[name] + offset
+  bReq = int(regnum>>16 == 1)
+  ret = dev.ctrl_transfer(0xc0, bReq, regnum & 0xFFFF, regnum >> 16, llen)
+  if debug:
+    print(f"reading {name:30s} {bReq} 0x{regnum:X} -> {ret}")
+  return ret
+
+def read_pc(dev):
+  pc = read_register(dev, 'currentPc', 8)
+  pc = struct.unpack("Q", pc)[0] * 0x10
+  print(f"PC: 0x{pc:X}")
+
 if __name__ == "__main__":
   #for k,v in regs.items(): print(f"{k:8X} : {v}")
   dev = open_device()
+
+  read_register(dev, 'efuse_00', 4)
+
+  write_register(dev, 'scu_ctrl_0', b'\x59\x00\x0f\x00')
+  write_register(dev, 'scu_ctrl_3', b'\x5c\x02\x85\x50')
+  write_register(dev, 'idleRegister', b'\x01\x00\x00\x00\x00\x00\x00\x00')
+  write_register(dev, 'tileconfig0', b'\x7f\x00\x00\x00\x00\x00\x00\x00')
+  write_register(dev, 'deepSleep', b'\x02\x1e\x00\x00\x00\x00\x00\x00')
+  write_register(dev, 'scu_ctrl_2', b'\x00\x00\x15\x00')
+  write_register(dev, 'descr_ep', b'\xf0\x00\x00\x00\x00\x00\x00\x00')
+  write_register(dev, 'multi_bo_ep', b'\x00\x00\x00\x00\x00\x00\x00\x00')
+  write_register(dev, 'outfeed_chunk_length', b'\x80\x00\x00\x00\x00\x00\x00\x00')
+  
 
   # setup registers
   for s in setup.strip().split("\n"):
@@ -120,13 +146,91 @@ if __name__ == "__main__":
     ret = dev.ctrl_transfer(reqType, bReq, wVal, wIndex, data)
     print(hex(reqType), bReq, hex(regnum), regs[regnum], data, ret)
   
+  read_register(dev, 'currentPc', 8)
+
+  # single step mode
+  #write_register(dev, 0, 'scalarCoreRunControl', b'\x03\x00\x00\x00\x00\x00\x00\x00')
+
   # run program
-  prog = open("programs/div2_8.coral", "rb").read()
+  prog = open("programs/custom.coral", "rb").read()
+  #prog = open("programs/mul2_add10.coral", "rb").read()
+  def fix(y):
+    return bytes([int("0x"+x, 16) for x in y.split()])
+
+  END = fix("40 08 01 00 00 00 00 00  00 00 00 00 00 00 00 00")
+  PAD = fix("C0 0F 00 04 00 00 00 00  00 00 00 00 00 00 00 00")
+  NOP = fix("00 08 00 00 00 00 00 00  00 00 00 00 00 00 00 00")
+  #END = b"\xff" * 0x10
+
+  # 0x10 : PC = 8
+  # 0x20 : PC = 17
+
+  # mask 0x10 instruction
+  #offset = 0x30
+  #prog = prog[:offset] + END + prog[offset+0x10:]
+
+  #prog = END + prog[0x10:]
+
+  #prog = prog[0:0xad0] + END + PAD*5
+  #print(hex(len(prog)))
+
+  #prog = prog[:0x40] + prog[0x50:] + END
+  #prog = prog[:0x40] + prog[0x50:] + END
+
+  """
+  prog = prog[0:4] + b"\x00" + prog[5:]
+
+  prog = prog[0:0x10] + NOP*3 + prog[0x40:]
+  prog = prog[0:0x49] + b"\xaa\xaa\xaa\xaa\x00" + prog[0x4e:]
+  prog = prog[0:0x79] + b"\xbb\xbb\xbb\xbb\x00" + prog[0x7e:]
+  prog = prog[0:0x80] + END + PAD * 0xb0 #+ prog[0x90:]
+  hexdump(prog[0:0x100])
+  """
+
+  # skip 0x420 instruction
+  #prog = prog[:0x420] + b"\x00"*0x10 + prog[0x430:]
+
+  # download the program
   llsend(dev, prog, 0)
+
+  # set a breakpoint
+  #write_register(dev, 'scalarCoreBreakPoint', q((0x80//0x10) << 1 | 1))
+  #read_register(dev, 'instruction_queue_int_status', 8)
+  #write_register(dev, 'currentPc', q(21))
+  #read_register(dev, 'currentPc', 8)
+
+
+  # run it
+  read_register(dev, 'scalarCoreRunStatus', 8)
+  write_register(dev, 'scalarCoreRunControl', b'\x01\x00\x00\x00\x00\x00\x00\x00')
+  read_register(dev, 'scalarCoreRunStatus', 8)
+  #read_register(dev, 'scMemoryAccess', 8)
+  #read_register(dev, 'scMemoryData', 8)
+
+  # unset breakpoint and run
+  #write_register(dev, 'scalarCoreBreakPoint', q(0))
+  #write_register(dev, 'scalarCoreRunControl', b'\x05\x00\x00\x00\x00\x00\x00\x00')
+  #read_register(dev, 'instruction_queue_int_status', 8)
+
+
+  # program gets to pc:66 waiting for data
+  read_pc(dev)
   llsend(dev, b"\xc0\x80\x40\x20\xc0\x80\x04\x02", 1)
+  read_pc(dev)
+
+  # halt the core and dump the registers
+  write_register(dev, 'scalarCoreRunControl', b'\x02\x00\x00\x00\x00\x00\x00\x00')
+  read_register(dev, 'scalarCoreRunStatus', 8)
+  for i in range(0, 0x100, 8):
+    read_register(dev, 'scalarRegisterFile', 8, offset=i)
+
+  print("getting status response")
   dat = dev.read(0x82, 0x10, timeout=6000)
   hexdump(dat)
+  read_register(dev, 'currentPc', 8)
 
   print("getting output tensor")
   dat = dev.read(0x81, 0x400, timeout=6000)
   hexdump(dat)
+  read_register(dev, 'currentPc', 8)
+  read_register(dev, 'scalarCoreRunStatus', 8)

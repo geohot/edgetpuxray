@@ -29,7 +29,7 @@ def representative_dataset():
 # Convert the model.
 root = tf.train.Checkpoint()
 #root.f = tf.function(lambda g_input: tf.nn.relu(g_input))
-root.f = tf.function(lambda g_input: g_input*2)
+root.f = tf.function(lambda g_input: g_input*2+10)
 #root.f = tf.function(lambda x: tf.nn.relu(x)-1)
 input_data = tf.constant(1., shape=[8])
 to_save = root.f.get_concrete_function(input_data)
