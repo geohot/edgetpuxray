@@ -90,8 +90,7 @@ def llsend(dev, dat, num, oldoff=-1):
   header = struct.pack("II", ll, num)
   hexdump(header)
   dev.write(1, header)
-  if num == 0:
-    hexdump(dat[:0x100])
+  #if num == 0: hexdump(dat[:0x100])
   while ll > 0x100000:
     bdat = dat[off:off+0x100000]
     #hexdump(bdat[0:0x10])
@@ -158,7 +157,7 @@ for s in setup.strip().split("\n"):
   ret = dev.ctrl_transfer(reqType, bReq, wVal, wIndex, data)
   print(hex(reqType), bReq, hex(regnum), regs[regnum], data, ret)
 
-# run 1
+# run 1 (does some setup?)
 csend(dev, "80 0f 00 ac 05 00 00 00 00 00 00 00 00 00 00 00 80 f6 ff 0f 00 f8 ff 7f 00 80 ff 01 00 08 00 00", 0x16d0, 0)
 csend(dev, "d8 cb ff ff db c8 ff ff 14 0e 00 00 19 0e 00 00 65 0b 00 00 b8 39 00 00 d4 d9 ff ff ac cc ff ff", 0x607500, 2)
 print("getting first response")
@@ -166,6 +165,7 @@ dat = dev.read(0x82, 0x10, timeout=6000)
 hexdump(dat)
 
 # run 2
+# 0x448d80+0x14c7100+0xb12100 = 0x2421f80
 csend(dev, "80 0f 00 00 ff 00 00 00 00 00 00 00 00 00 00 00 80 f6 ff 0f 00 f0 ff 7f 00 80 ff 01 00 08 00 00", 0x3fc20, 0)
 llsend(dev, image_pixels+b"\x00\x00\x00\x00\x00", 1)
 #llsend(dev, open("data/banana.dat", "rb").read()+b"\x00\x00\x00\x00\x00", 1)
