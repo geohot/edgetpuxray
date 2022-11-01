@@ -105,8 +105,9 @@ def read_register(dev, name, llen, offset=0, debug=True):
   regnum = iregs[name] + offset
   bReq = int(regnum>>16 == 1)
   ret = dev.ctrl_transfer(0xc0, bReq, regnum & 0xFFFF, regnum >> 16, llen)
+  nret = struct.unpack("Q" if llen == 8 else "I", ret)[0]
   if debug:
-    print(f"reading {name:30s} {bReq} 0x{regnum:X} -> {ret}")
+    print(f"reading {name:30s} {bReq} 0x{regnum:X} -> 0x{nret:X}")
   return ret
 
 def read_pc(dev):
@@ -153,6 +154,7 @@ if __name__ == "__main__":
 
   # run program
   prog = open("programs/custom.coral", "rb").read()
+  #prog = open("programs/div2.coral", "rb").read()
   #prog = open("programs/mul2_add10.coral", "rb").read()
   def fix(y):
     return bytes([int("0x"+x, 16) for x in y.split()])
@@ -188,7 +190,7 @@ if __name__ == "__main__":
   """
 
   # skip 0x420 instruction
-  #prog = prog[:0x420] + b"\x00"*0x10 + prog[0x430:]
+  #prog = prog[:0x420] + b"\x00"*0x10 + preg[0x430:]
 
   # download the program
   llsend(dev, prog, 0)
@@ -223,6 +225,8 @@ if __name__ == "__main__":
   read_register(dev, 'scalarCoreRunStatus', 8)
   for i in range(0, 0x100, 8):
     read_register(dev, 'scalarRegisterFile', 8, offset=i)
+  for i in range(0, 0x40, 8):
+    read_register(dev, 'predicateRegisterFile', 8, offset=i)
 
   print("getting status response")
   dat = dev.read(0x82, 0x10, timeout=6000)

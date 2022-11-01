@@ -7,30 +7,41 @@ from collections import defaultdict
 
 dat = open("programs/div2.coral", "rb").read()
 
+# CORAL NOTES
+# 32 scalar registers, 32-bits?
+
 #def fix(y):
 #  return bytes([int("0x"+x, 16) for x in y.split()])
 #op = fix("00 08 00 00 00 00 C0 1B  00 AA AA AA AA 00 00 00")
 #print(op)
 
 ins = BitStruct(
-  "unk_3" / BitsInteger(28),
+  "unk_3" / BitsInteger(26),
   "imm_scalar" / BitsInteger(32),
-  "unk_2" / BitsInteger(3),
-  "s1_x" / BitsInteger(5),
-  "unk_1" / BitsInteger(6),
+  "s_y" / BitsInteger(5),
+  "s_x" / BitsInteger(5),
+  "s_op" / BitsInteger(6),
   "imm_size" / BitsInteger(32),
   "prefix" / BitsInteger(22),
 )
 # TODO: can assert that it's 128?
 assert ins.sizeof() == 16
 
-def dec(my_dat):
-  hexdump(my_dat)
+def dec(my_dat, off=-1):
+  my_dat = my_dat[:0x10]
+  #hexdump(my_dat)
   dd = ins.parse(my_dat[::-1])
-  print(dd)
+  prt = []
+  for k,v in list(dd.items())[::-1]:
+    if k == "_io": continue
+    prt.append("%12s:%8x" % (k,v))
+  print(f"{off:4X}" + ','.join(prt))
 
-for i in range(0, 0x80, 0x10):
-  dec(dat[i:i+0x10])
+for i in range(0, len(dat), 0x10):
+  dec(dat[i:i+0x10], i)
+
+#exit(0)
+#dec(dat[0x180:])
 
 #for i in range(-0x40, -0x10, 0x10): dec(dat[i:i+0x10])
 #dec(dat[-0x60:-0x50])
@@ -56,17 +67,23 @@ def mins(**kwargs):
     ret[k] = v
   return [ins.build(ret)[::-1]]
 
+ADDI = 0x21   # s_x <- s_y + imm_scalar
+SUBI = 0x22   # s_x <- s_y - imm_scalar
+ANDI = 0x23   # s_x <- s_y & imm_scalar
+ORRI = 0x24   # s_x <- s_y | imm_scalar
+XORI = 0x25   # s_x <- s_y ^ imm_scalar
+
+MOVI = 0x2f   # s_x <- imm_scalar
+
 print("my program")
 prog = []
-prog += mins(prefix=2048, unk_1=47, s1_x=0, imm_scalar=0x1337)
-prog += mins(prefix=2048, unk_1=47, s1_x=1, imm_scalar=0x1337)
-prog += mins(prefix=2048, unk_1=47, s1_x=2, imm_scalar=0x1337)
-prog += mins(prefix=2048, unk_1=47, s1_x=3, imm_scalar=0x1337)
-prog += mins(prefix=67648) # halt
+prog += mins(prefix=0x800, s_op=MOVI, s_x=0xc, imm_scalar=0xa3371337)
+prog += mins(prefix=0x800, s_op=SUBI, s_x=0, s_y=0xc, imm_scalar=0xF000FFF0)
+prog += mins(prefix=0x10840) # halt
 
 # add start at the end
-prog = mins(prefix=3968, imm_size=len(prog)*0x10) + prog  # start
-prog += mins(prefix=4032, imm_size=0x10)  # end
+prog =  mins(prefix=0xf80, imm_size=len(prog)*0x10) + prog  # start
+prog += mins(prefix=0xfc0, imm_size=0x10)  # end
 prog = b''.join(prog)
 hexdump(prog)
 
