@@ -26,10 +26,7 @@ def FlatbufferToDict(fb):
   #  return fb
 
 #buffer_data = open("compile/model_edgetpu.tflite", "rb").read()
-#offset = 6
-
 buffer_data = open("inception_v4_299_quant_edgetpu.tflite", "rb").read()
-offset = 8
 
 model_obj = schema_fb.Model.GetRootAsModel(buffer_data, 0)
 model = schema_fb.ModelT.InitFromObj(model_obj)
@@ -40,6 +37,8 @@ pp.pprint(fb)
 op = fb['subgraphs'][0]['operators'][0]['customOptions']
 print(len(op))
 hexdump(op[0:0x20])
+offset = bytes(op).find(b"DWN1") - 4
+print("got offset", offset)
 
 import flatbuffers
 idd = flatbuffers.util.GetBufferIdentifier(op, offset, False)
