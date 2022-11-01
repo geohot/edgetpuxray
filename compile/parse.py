@@ -25,9 +25,9 @@ def FlatbufferToDict(fb):
   #else:
   #  return fb
 
-#buffer_data = open("compile/model.tflite", "rb").read()
-buffer_data = open("compile/model_edgetpu.tflite", "rb").read()
-#buffer_data = open("inception_v4_299_quant_edgetpu.tflite", "rb").read()
+#buffer_data = open("model.tflite", "rb").read()
+buffer_data = open("model_edgetpu.tflite", "rb").read()
+#buffer_data = open("../inception_v4_299_quant_edgetpu.tflite", "rb").read()
 
 model_obj = schema_fb.Model.GetRootAsModel(buffer_data, 0)
 model = schema_fb.ModelT.InitFromObj(model_obj)
