@@ -79,6 +79,8 @@ libusb_control_transfer(0xc0, 1, reg:0x 1a0d8, 0x16f4f2bfc, wLength: 4) : 01 00 
 libusb_control_transfer(0x40, 1, reg:0x 1a0d8, 0x16f4f2d2c, wLength: 4) : 00 00 00 80
 """
 
+regs = [x.strip().split(' // NOLINT: ') for x in open("beagle_csr_offsets.h").read().split("\n") if ' // NOLINT: ' in x]
+regs = {int(x.strip(' ,'),16):y for x,y in regs}
 
 def llsend(dev, dat, num, oldoff=-1):
   ll = len(dat)
@@ -151,7 +153,7 @@ for s in setup.strip().split("\n"):
   if reqType == 0xC0:
     data = len(data)
   ret = dev.ctrl_transfer(reqType, bReq, wVal, wIndex, data)
-  print(hex(reqType), bReq, hex(regnum), data, ret)
+  print(hex(reqType), bReq, hex(regnum), regs[regnum], data, ret)
 
 # run 1
 csend(dev, "80 0f 00 ac 05 00 00 00 00 00 00 00 00 00 00 00 80 f6 ff 0f 00 f8 ff 7f 00 80 ff 01 00 08 00 00", 0x16d0, 0)
