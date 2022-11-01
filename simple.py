@@ -121,9 +121,9 @@ if __name__ == "__main__":
     print(hex(reqType), bReq, hex(regnum), regs[regnum], data, ret)
   
   # run program
-  prog = open("programs/div2.coral", "rb").read()
+  prog = open("programs/div2_8.coral", "rb").read()
   llsend(dev, prog, 0)
-  llsend(dev, b"\x48\x00\x00\x00\x00\x00\x00\x00", 1)
+  llsend(dev, b"\xc0\x80\x40\x20\xc0\x80\x04\x02", 1)
   dat = dev.read(0x82, 0x10, timeout=6000)
   hexdump(dat)
 
