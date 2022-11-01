@@ -57,7 +57,8 @@ int libusb_submit_transfer(struct libusb_transfer *ptr) {
 }
 
 int main(int argc, char* argv[]) {
-  edgetpu::EdgeTpuManager::GetSingleton()->SetVerbosity(7);
+  //edgetpu::EdgeTpuManager::GetSingleton()->SetVerbosity(7);
+  edgetpu::EdgeTpuManager::GetSingleton()->SetVerbosity(10);
 
   auto tpu_context = edgetpu::EdgeTpuManager::GetSingleton()->OpenDevice();
   printf("opened device\n");

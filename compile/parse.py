@@ -66,7 +66,7 @@ for x in dir(dat):
     print(x)
 
 def print_field_offset(x):
-  return f"{x.Meta().Desc()} {x.Meta().Batch()} {x.Meta().Name().decode('utf-8')[0:10]} {x.OffsetBit()/8}"
+  return (x.Meta().Desc(), x.Meta().Batch(), x.Meta().Name().decode('utf-8'), x.OffsetBit())
 
 for i in range(dat.SerializedExecutablesLength()):
   print(i)

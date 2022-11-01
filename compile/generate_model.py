@@ -26,10 +26,11 @@ def representative_dataset():
 
 # Convert the model.
 root = tf.train.Checkpoint()
-#root.f = tf.function(lambda x: tf.nn.relu(x))
-root.f = tf.function(lambda x: tf.nn.relu(x))
-input_data = tf.constant(1., shape=[4])
+root.f = tf.function(lambda g_input: tf.nn.relu(g_input))
+#root.f = tf.function(lambda x: tf.nn.relu(x)-1)
+input_data = tf.constant(1., shape=[1])
 to_save = root.f.get_concrete_function(input_data)
+print(to_save)
 
 converter = tf.lite.TFLiteConverter.from_concrete_functions([to_save])
 #converter = tf.lite.TFLiteConverter.from_keras_model(model)
