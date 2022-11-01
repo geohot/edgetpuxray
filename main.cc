@@ -15,6 +15,7 @@ void hexdump(void *d, int l) {
   printf("\n");
 }
 
+// TODO: these don't work
 extern "C" {
 
 int (*REAL_libusb_control_transfer)(libusb_device_handle *dev_handle, uint8_t bmRequestType,
@@ -42,11 +43,11 @@ int libusb_submit_transfer(struct libusb_transfer *ptr) {
   //printf("%p\n", ptr);
   printf("endpoint:%2x type:%d length:%6x : ", ptr->endpoint, ptr->type, ptr->length);
   hexdump(ptr->buffer, (ptr->length > 0x20) ? 0x20 : ptr->length);
-  if (ptr->length == 0x3fc20) {
+  /*if (ptr->length == 0x3fc20) {
     FILE *f = fopen("data/program.dump", "wb");
     fwrite(ptr->buffer, 1, ptr->length, f);
     fclose(f);
-  }
+  }*/
   /*real_callback = ptr->callback;
   ptr->callback = callback;*/
   return REAL_libusb_submit_transfer(ptr);
@@ -56,14 +57,14 @@ int libusb_submit_transfer(struct libusb_transfer *ptr) {
 }
 
 int main(int argc, char* argv[]) {
-  std::string model_file_name = "/Users/kafka/fun/edgetpuxray/inception_v4_299_quant_edgetpu.tflite";
-  //std::string model_file_name = "/Users/kafka/fun/edgetpuxray/compile/model.tflite";
+  edgetpu::EdgeTpuManager::GetSingleton()->SetVerbosity(7);
+
   auto tpu_context = edgetpu::EdgeTpuManager::GetSingleton()->OpenDevice();
   printf("opened device\n");
 
   std::unique_ptr<tflite::Interpreter> interpreter;
   tflite::ops::builtin::BuiltinOpResolver resolver;
-  auto model = tflite::FlatBufferModel::BuildFromFile(model_file_name.c_str());
+  auto model = tflite::FlatBufferModel::BuildFromFile(argv[1]);
   printf("model loaded\n");
 
   resolver.AddCustom(edgetpu::kCustomOp, edgetpu::RegisterCustomOp());
@@ -85,11 +86,13 @@ int main(int argc, char* argv[]) {
   assert(input != NULL);
   input[0] = 10;*/
 
+  if (argc < 3) return 0;
+
   // load banana
   auto *input = interpreter->typed_input_tensor<uint8_t>(0);
   assert(input != NULL);
 
-  FILE *f = fopen(argv[1], "rb");
+  FILE *f = fopen(argv[2], "rb");
   assert(f);
   int len = fread(input, 1, 299*299*3, f);
   printf("read 0x%x\n", len);

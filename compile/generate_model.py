@@ -35,3 +35,6 @@ tflite_model = converter.convert()
 with open('model.tflite', 'wb') as f:
   f.write(tflite_model)
 
+# Compile it
+os.system("./docker.sh")
+
