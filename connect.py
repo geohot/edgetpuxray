@@ -81,14 +81,16 @@ libusb_control_transfer(0x40, 1, reg:0x 1a0d8, 0x16f4f2d2c, wLength: 4) : 00 00 
 
 regs = [x.strip().split(' // NOLINT: ') for x in open("beagle_csr_offsets.h").read().split("\n") if ' // NOLINT: ' in x]
 regs = {int(x.strip(' ,'),16):y for x,y in regs}
+DescriptorTag = ['kInstructions', 'kInputActivations', 'kParameters', 'kOutputActivations', 'kInterrupt0', 'kInterrupt1', 'kInterrupt2', 'kInterrupt3']
 
 def llsend(dev, dat, num, oldoff=-1):
   ll = len(dat)
-  print("sending 0x%x with length 0x%x num %d" % (oldoff, ll, num))
+  print("sending 0x%x with length 0x%x num %d %s" % (oldoff, ll, num, DescriptorTag[num]))
   off = 0
   header = struct.pack("II", ll, num)
   hexdump(header)
   dev.write(1, header)
+  hexdump(dat[:0x20])
   while ll > 0x100000:
     bdat = dat[off:off+0x100000]
     #hexdump(bdat[0:0x10])
@@ -158,6 +160,7 @@ for s in setup.strip().split("\n"):
 # run 1
 csend(dev, "80 0f 00 ac 05 00 00 00 00 00 00 00 00 00 00 00 80 f6 ff 0f 00 f8 ff 7f 00 80 ff 01 00 08 00 00", 0x16d0, 0)
 csend(dev, "d8 cb ff ff db c8 ff ff 14 0e 00 00 19 0e 00 00 65 0b 00 00 b8 39 00 00 d4 d9 ff ff ac cc ff ff", 0x607500, 2)
+print("getting first response")
 dat = dev.read(0x82, 0x10, timeout=6000)
 hexdump(dat)
 
@@ -170,9 +173,11 @@ csend(dev, "80 0f 00 dc fe 00 00 00 00 00 00 00 00 00 00 00 80 f6 ff 6f 7f 00 00
 csend(dev, "42 03 00 00 b9 0d 00 00 fc fb ff ff f3 03 00 00 88 04 00 00 b7 ef ff ff 53 fe ff ff a4 0e 00 00", 0x14c7100, 2)
 csend(dev, "80 0f 00 70 51 00 00 00 00 00 00 00 00 00 00 00 80 f6 ff 0f fa 00 00 00 00 80 ff 01 00 00 00 00", 0x145e0, 0)
 csend(dev, "5d ff ff ff 04 fd ff ff bb fc ff ff b1 fd ff ff 59 fe ff ff 84 ff ff ff d3 fe ff ff 6d 00 00 00", 0xb12100, 2)
+print("getting second response")
 dat = dev.read(0x82, 0x10, timeout=6000)
 hexdump(dat)
 
+print("getting output tensor")
 dat = dev.read(0x81, 0x400, timeout=6000)
 aa = []
 for i in range(len(lbls)):
