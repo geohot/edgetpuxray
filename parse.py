@@ -25,8 +25,9 @@ def FlatbufferToDict(fb):
   #else:
   #  return fb
 
-#buffer_data = open("compile/model_edgetpu.tflite", "rb").read()
-buffer_data = open("inception_v4_299_quant_edgetpu.tflite", "rb").read()
+#buffer_data = open("compile/model.tflite", "rb").read()
+buffer_data = open("compile/model_edgetpu.tflite", "rb").read()
+#buffer_data = open("inception_v4_299_quant_edgetpu.tflite", "rb").read()
 
 model_obj = schema_fb.Model.GetRootAsModel(buffer_data, 0)
 model = schema_fb.ModelT.InitFromObj(model_obj)
@@ -64,6 +65,9 @@ for x in dir(dat):
   if x[0] != "_":
     print(x)
 
+def print_field_offset(x):
+  return f"{x.Meta().Desc()} {x.Meta().Batch()} {x.Meta().Name().decode('utf-8')[0:10]} {x.OffsetBit()/8}"
+
 for i in range(dat.SerializedExecutablesLength()):
   print(i)
   se = Executable.GetRootAs(dat.SerializedExecutables(i))
@@ -71,4 +75,7 @@ for i in range(dat.SerializedExecutablesLength()):
   for j in range(se.InstructionBitstreamsLength()):
     see = se.InstructionBitstreams(j)
     #print(dir(see))
-    print(hex(see.BitstreamLength()), see.FieldOffsetsLength())
+    print(hex(see.BitstreamLength()), see.BitstreamLength(), [print_field_offset(see.FieldOffsets(i)) for i in range(see.FieldOffsetsLength())])
+    hexdump(see.BitstreamAsNumpy()[0:0x20])
+    with open("/tmp/prog", "wb") as f:
+      f.write(see.BitstreamAsNumpy())

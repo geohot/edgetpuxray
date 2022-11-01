@@ -7,13 +7,16 @@ import tensorflow as tf
 # example from https://www.tensorflow.org/lite/convert
 
 # Create a model using high-level tf.keras.* APIs
+"""
 model = tf.keras.models.Sequential([
-    tf.keras.layers.Dense(units=1, input_shape=[1]),
-    tf.keras.layers.Dense(units=16, activation='relu'),
-    tf.keras.layers.Dense(units=1)
+    tf.keras.layers.ReLU(input_shape=[1])
+    #tf.keras.layers.Dense(units=1, input_shape=[1], use_bias=False),
+    #tf.keras.layers.Dense(units=16, activation='relu'),
+    #tf.keras.layers.Dense(units=1)
 ])
 model.compile(optimizer='sgd', loss='mean_squared_error') # compile the model
-model.fit(x=[-1, 0, 1], y=[-3, -1, 1], epochs=5) # train the model
+"""
+#model.fit(x=[-1, 0, 1], y=[-3, -1, 1], epochs=5) # train the model
 # (to generate a SavedModel) tf.saved_model.save(model, "saved_model_keras_dir")
 
 def representative_dataset():
@@ -22,7 +25,14 @@ def representative_dataset():
     yield [data.astype(np.float32)]
 
 # Convert the model.
-converter = tf.lite.TFLiteConverter.from_keras_model(model)
+root = tf.train.Checkpoint()
+#root.f = tf.function(lambda x: tf.nn.relu(x))
+root.f = tf.function(lambda x: 2*x)
+input_data = tf.constant(1., shape=[1, 1])
+to_save = root.f.get_concrete_function(input_data)
+
+converter = tf.lite.TFLiteConverter.from_concrete_functions([to_save])
+#converter = tf.lite.TFLiteConverter.from_keras_model(model)
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
 converter.representative_dataset = representative_dataset
 
@@ -37,4 +47,3 @@ with open('model.tflite', 'wb') as f:
 
 # Compile it
 os.system("./docker.sh")
-
