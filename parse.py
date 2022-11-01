@@ -1,32 +1,47 @@
 #!/usr/bin/env python3
 import numpy as np
-import tensorflow as tf
+import pprint
+from hexdump import hexdump
 
-# Load TFLite model and allocate tensors.
-interpreter = tf.lite.Interpreter(model_path="inception_v4_299_quant_edgetpu.tflite")
+# from https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/tools/visualize.py
+from tensorflow.lite.python import schema_py_generated as schema_fb
 
-print(dir(interpreter))
+def FlatbufferToDict(fb):
+  if isinstance(fb, int) or isinstance(fb, float) or isinstance(fb, str):
+    return fb
+  elif hasattr(fb, "__dict__"):
+    result = {}
+    for attribute_name in dir(fb):
+      attribute = fb.__getattribute__(attribute_name)
+      if not callable(attribute) and attribute_name[0] != "_":
+        result[attribute_name] = FlatbufferToDict(attribute)
+    return result
+  elif isinstance(fb, np.ndarray):
+    return fb
+  elif isinstance(fb, bytes):
+    return fb
+  elif hasattr(fb, "__len__"):
+    return [FlatbufferToDict(entry) for entry in fb]
+  else:
+    return fb
 
-#print(interpreter.get_tensor_details())
-for x in interpreter._get_ops_details():
-  print(x)
+buffer_data = open("compile/model_edgetpu.tflite", "rb").read()
+#buffer_data = open("inception_v4_299_quant_edgetpu.tflite", "rb").read()
 
-ri = interpreter._interpreter
-print(ri)
+model_obj = schema_fb.Model.GetRootAsModel(buffer_data, 0)
+model = schema_fb.ModelT.InitFromObj(model_obj)
+fb = FlatbufferToDict(model)
+pp = pprint.PrettyPrinter(indent=2)
+pp.pprint(fb)
 
-print(ri.NumNodes(), ri.NodeName(0))
+op = fb['subgraphs'][0]['operators'][0]['customOptions']
+print(len(op))
+hexdump(op[0:0x200])
 
-# RuntimeError: Encountered unresolved custom op: edgetpu-custom-op.
-#interpreter.allocate_tensors()
-
+# flatc -p executable.fbs 
 """
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
-
-print(input_details, output_details)
-
-input_shape = input_details[0]['shape']
-input_data = np.array(np.random.random_sample(input_shape), dtype=np.uint8)
-interpreter.set_tensor(input_details[0]['index'], input_data)
-interpreter.invoke()
+from platforms.darwinn.Executable import Executable
+exc = Executable.GetRootAsExecutable(op, 0)
+print(dir(exc))
+print(exc.InputLayersLength())
 """
