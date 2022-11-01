@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-A = open("relu.coral", "rb").read()
-B = open("relu_2.coral", "rb").read()
+A = open("mul2.coral", "rb").read()
+B = open("mul2_fake.coral", "rb").read()
 #B = open("relu_sub_1.coral", "rb").read()
 from termcolor import colored
 

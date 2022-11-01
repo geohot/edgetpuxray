@@ -61,21 +61,12 @@ def llsend(dev, dat, num):
   dev.write(1, dat[off:off+ll])
 
 setup = """
-libusb_control_transfer(0xc0, 1, reg:0x 1a30c, 0x16f4f2c0c, wLength: 4) : 01 00 6a b7
 libusb_control_transfer(0x40, 1, reg:0x 1a30c, 0x16f4f2d3c, wLength: 4) : 59 00 0f 00
-libusb_control_transfer(0xc0, 1, reg:0x 1a314, 0x16f4f2c0c, wLength: 4) : 59 00 0f 00
-libusb_control_transfer(0xc0, 1, reg:0x 1a318, 0x16f4f2bfc, wLength: 4) : 00 00 00 00
-libusb_control_transfer(0xc0, 1, reg:0x 1a318, 0x16f4f2bcc, wLength: 4) : 01 00 00 00
 libusb_control_transfer(0x40, 1, reg:0x 1a318, 0x16f4f2cfc, wLength: 4) : 5c 02 85 50
-libusb_control_transfer(0xc0, 1, reg:0x 1a318, 0x16f4f2bcc, wLength: 4) : 5c 02 c5 50
-libusb_control_transfer(0xc0, 0, reg:0x 44018, 0x16f4f2b48, wLength: 8) : 01 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 4a000, 0x16f4f2cf8, wLength: 8) : 01 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 48788, 0x16f4f2cf8, wLength: 8) : 7f 00 00 00 00 00 00 00
-libusb_control_transfer(0xc0, 0, reg:0x 48788, 0x16f4f2b48, wLength: 8) : 00 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 40020, 0x16f4f2cf8, wLength: 8) : 02 1e 00 00 00 00 00 00
-libusb_control_transfer(0xc0, 1, reg:0x 1a314, 0x16f4f2c1c, wLength: 4) : 00 00 00 00
 libusb_control_transfer(0x40, 1, reg:0x 1a314, 0x16f4f2d4c, wLength: 4) : 00 00 15 00
-libusb_control_transfer(0xc0, 1, reg:0x 1a000, 0x16f4f2adc, wLength: 4) : 01 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 4c148, 0x16f4f2c08, wLength: 8) : f0 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 4c160, 0x16f4f2c08, wLength: 8) : 00 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 4c058, 0x16f4f2c08, wLength: 8) : 80 00 00 00 00 00 00 00
@@ -85,7 +76,6 @@ libusb_control_transfer(0x40, 0, reg:0x 44198, 0x16f4f2ce8, wLength: 8) : 01 00 
 libusb_control_transfer(0x40, 0, reg:0x 441d8, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 44218, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 48788, 0x16f4f2ce8, wLength: 8) : 7f 00 00 00 00 00 00 00
-libusb_control_transfer(0xc0, 0, reg:0x 48788, 0x16f4f2b38, wLength: 8) : 08 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 400c0, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 40150, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 40110, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
@@ -101,17 +91,13 @@ libusb_control_transfer(0x40, 0, reg:0x 4c070, 0x16f4f2d38, wLength: 8) : 01 00 
 libusb_control_transfer(0x40, 0, reg:0x 4c080, 0x16f4f2d38, wLength: 8) : 01 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 4c090, 0x16f4f2d38, wLength: 8) : 01 00 00 00 00 00 00 00
 libusb_control_transfer(0x40, 0, reg:0x 4c0a0, 0x16f4f2d38, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0xc0, 1, reg:0x 1a0d4, 0x16f4f2bfc, wLength: 4) : 00 00 00 00
 libusb_control_transfer(0x40, 1, reg:0x 1a0d4, 0x16f4f2d2c, wLength: 4) : 01 00 00 80
-libusb_control_transfer(0xc0, 1, reg:0x 1a704, 0x16f4f2bec, wLength: 4) : 00 00 00 00
 libusb_control_transfer(0x40, 1, reg:0x 1a704, 0x16f4f2d1c, wLength: 4) : 7f 00 00 00
-libusb_control_transfer(0xc0, 1, reg:0x 1a33c, 0x16f4f2bec, wLength: 4) : 7f 00 70 00
 libusb_control_transfer(0x40, 1, reg:0x 1a33c, 0x16f4f2d1c, wLength: 4) : 3f 00 00 00
 libusb_control_transfer(0x40, 1, reg:0x 1a500, 0x16f4f2d4c, wLength: 4) : 01 00 00 00
 libusb_control_transfer(0x40, 1, reg:0x 1a600, 0x16f4f2d4c, wLength: 4) : 01 00 00 00
 libusb_control_transfer(0x40, 1, reg:0x 1a558, 0x16f4f2d4c, wLength: 4) : 03 00 00 00
 libusb_control_transfer(0x40, 1, reg:0x 1a658, 0x16f4f2d4c, wLength: 4) : 03 00 00 00
-libusb_control_transfer(0xc0, 1, reg:0x 1a0d8, 0x16f4f2bfc, wLength: 4) : 01 00 00 00
 libusb_control_transfer(0x40, 1, reg:0x 1a0d8, 0x16f4f2d2c, wLength: 4) : 00 00 00 80
 """
 
@@ -135,8 +121,12 @@ if __name__ == "__main__":
     print(hex(reqType), bReq, hex(regnum), regs[regnum], data, ret)
   
   # run program
-  prog = open("programs/relu.coral", "rb").read()
+  prog = open("programs/div2.coral", "rb").read()
   llsend(dev, prog, 0)
-  llsend(dev, b"\x00\x00\x00\x00\x00\x00\x00\x00", 1)
+  llsend(dev, b"\x48\x00\x00\x00\x00\x00\x00\x00", 1)
   dat = dev.read(0x82, 0x10, timeout=6000)
+  hexdump(dat)
+
+  print("getting output tensor")
+  dat = dev.read(0x81, 0x400, timeout=6000)
   hexdump(dat)

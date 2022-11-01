@@ -20,13 +20,15 @@ model.compile(optimizer='sgd', loss='mean_squared_error') # compile the model
 # (to generate a SavedModel) tf.saved_model.save(model, "saved_model_keras_dir")
 
 def representative_dataset():
-  for _ in range(100):
-    data = np.random.rand(1, 1)
+  for i in range(256):
+    #data = np.random.rand(1, 1)
+    data = np.array(i)
     yield [data.astype(np.float32)]
 
 # Convert the model.
 root = tf.train.Checkpoint()
-root.f = tf.function(lambda g_input: tf.nn.relu(g_input))
+#root.f = tf.function(lambda g_input: tf.nn.relu(g_input))
+root.f = tf.function(lambda g_input: g_input*2)
 #root.f = tf.function(lambda x: tf.nn.relu(x)-1)
 input_data = tf.constant(1., shape=[1])
 to_save = root.f.get_concrete_function(input_data)
