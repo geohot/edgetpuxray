@@ -4,10 +4,18 @@ import ctypes
 from hexdump import hexdump
 from construct import BitStruct, BitsInteger
 from collections import defaultdict
+from colored import stylize, fg
 
-dat = open("programs/div2_20.coral", "rb").read()
+dat = open("programs/div2_40.coral", "rb").read()
+altdat = open("programs/div2_20.coral", "rb").read()
 #dat = open("programs/weight_copy_in_0x80.coral", "rb").read()
 #dat = open("programs/dense_1_8_mul.coral", "rb").read()
+
+# div2_20 vs div2_10
+# 150                                      prefix:     680,imm_size:      80,    v_op:       e,v_offset:     5ff,  vs_reg:       2,    s_op:       0,     s_x:       0,     s_y:       0,imm_scalar:   20002,   unk_3:       0                                  
+# 150                                      prefix:     280,imm_size:      80,    v_op:       f,v_offset:     5ff,  vs_reg:       2,    s_op:       0,     s_x:       0,     s_y:       0,imm_scalar:   20002,   unk_3:       0                                                                                           
+
+
 
 # div2 vs relu vs add1
 # 6B0       prefix:   18600,imm_size:       0,    v_op:       0,v_offset:    1dfe,  vs_reg:       f,    s_op:      1f,     s_x:       0,     s_y:       0,imm_scalar:  21bf80,   unk_3:       0
@@ -41,7 +49,9 @@ dat = open("programs/div2_20.coral", "rb").read()
 #print(op)
 
 ins = BitStruct(
-  "unk_3" / BitsInteger(26),
+  "unk_3" / BitsInteger(18),
+  "vs_reg_2" / BitsInteger(5),
+  "v_op_2" / BitsInteger(3),
 
   # these 4 are correct
   "imm_scalar" / BitsInteger(32),
@@ -54,9 +64,10 @@ ins = BitStruct(
   "v_offset" / BitsInteger(13),
   # v_op and imm_size are fused with prefix = 0x7c
   "v_op" / BitsInteger(4),
-
   "imm_size" / BitsInteger(10),
-  "prefix" / BitsInteger(17),
+  "prefix" / BitsInteger(10),
+  "enable_scalar" / BitsInteger(1),
+  "early" / BitsInteger(6),
 
   # these three are correct, not always :(
   "yes_pred" / BitsInteger(1),
@@ -66,27 +77,52 @@ ins = BitStruct(
 # TODO: can assert that it's 128?
 assert ins.sizeof() == 16
 
-def dec(my_dat, off=-1):
+ops = ["NOP", "ADD", "SUB", "AND", "ORR", "XOR", "SHL", "SHR", "ASR", "EQ", "NEQ", "GT", "ULT", "GEQ", "GES", "MOV"]
+
+def dec(my_dat, off=-1, cmp=None):
   my_dat = my_dat[:0x10]
   #hexdump(my_dat)
   dd = ins.parse(my_dat[::-1])
-  prt = []
-  for k,v in list(dd.items())[::-1]:
-    if k == "_io": continue
-    if k not in ['gate', 'pred_reg', 'yes_pred']:
-      prt.append("%8s:%8x" % (k,v))
-  pp = ""
-  if dd['gate']:
-    if not dd['yes_pred']:
-      pp += "!"
-    pp += str(dd['pred_reg'])
+  if cmp:
+    dd_alt = ins.parse(cmp[::-1])
 
-  print(f"{off:4X} {pp:4s}" + ','.join(prt))
+  has_diff = True
+  did_swap = False
+  while has_diff:
+    has_diff = False
+
+    prt = []
+    for k,v in list(dd.items())[::-1]:
+      if k == "_io": continue
+      if k not in ['gate', 'pred_reg', 'yes_pred']:
+        if cmp and dd_alt[k] != dd[k]:
+          prt.append(stylize("%8s:%8x" % (k,v), fg('red') if did_swap else fg('green')))
+          if not did_swap: has_diff = True
+        else:
+          prt.append("%8s:%8x" % (k,v))
+    pp = ""
+    if dd['gate']:
+      if not dd['yes_pred']:
+        pp += "!"
+      pp += str(dd['pred_reg'])
+
+    print(f"{off:4X} {pp:4s}", end="")
+    more = ""
+    if dd['v_op'] == 6:
+      more = "USB ACT"
+    elif dd['enable_scalar'] and dd['early'] == 0:
+      imm = f"0x{dd['imm_scalar']:X}" if dd['s_op'] & 0x20 else f"s{dd['imm_scalar']}"
+      more = f"{'C' if dd['s_op']&0xF in [9,10,11,12,13,14] else 's'}{dd['s_x']} <- s{dd['s_y']} {ops[dd['s_op']&0xF]} {imm}"
+    print("%-30s" % more, f','.join(prt))
+
+    if cmp:
+      dd_alt, dd = dd, dd_alt
+      did_swap = True
+
 
 mdat = []
 for i in range(0, len(dat), 0x10):
-  dec(dat[i:i+0x10], i)
-  mdat.append(dat[i:i+0x10])
+  dec(dat[i:i+0x10], i, altdat[i:i+0x10])
 
 #exit(0)
 #dec(dat[0x180:])
@@ -150,15 +186,17 @@ MOVI = 0x2f   # s_x <- imm_scalar
 
 print("my program")
 prog = []
-prog += mins(prefix=0x40, s_op=MOVI, s_x=0xb, imm_scalar=0xabab)
+prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0xb, imm_scalar=0xabab, vs_reg=0, v_op_2=7, vs_reg_2=5)
 #prog += mins(prefix=0x10, s_op=MOVI, s_x=0xc, imm_scalar=0x13371337)
 #prog += mins(prefix=0x10, s_op=SUB, s_x=2, s_y=0xc, imm_scalar=0xb)
 
 #for i in range(4, 8): prog += mins(prefix=0x800, s_op=EQ, s_x=i, s_y=0, imm_scalar=0)
+"""
 prog += mins(prefix=0x40, s_op=EQ, s_x=2, s_y=0, imm_scalar=0)
 prog += mins(prefix=0x40, s_op=EQ, s_x=4, s_y=0, imm_scalar=0)
 prog += mins(prefix=0x40, s_op=EQ, s_x=5, s_y=0, imm_scalar=0)
 prog += mins(prefix=0x40, s_op=EQ, s_x=7, s_y=0, imm_scalar=0)
+"""
 
 """
 prog += mins(prefix=0x20, run_flag=0, pred_reg=1, s_op=MOVI, s_x=0x10, imm_scalar=0xcafebabe)
@@ -171,6 +209,7 @@ prog += mins(prefix=0x20, run_flag=2, pred_reg=2, s_op=MOVI, s_x=0x16, imm_scala
 prog += mins(prefix=0x20, run_flag=3, pred_reg=2, s_op=MOVI, s_x=0x17, imm_scalar=0xcafebabe)  # run if preg_reg == 0
 """
 
+"""
 prog += mins(prefix=0x40, gate=1, pred_reg=0, yes_pred=1, s_op=MOVI, s_x=0x10, imm_scalar=0xcafebabe)
 prog += mins(prefix=0x40, gate=1, pred_reg=1, yes_pred=1, s_op=MOVI, s_x=0x11, imm_scalar=0xcafebabe)
 prog += mins(prefix=0x40, gate=1, pred_reg=2, yes_pred=1, s_op=MOVI, s_x=0x12, imm_scalar=0xcafebabe)
@@ -179,6 +218,7 @@ prog += mins(prefix=0x40, gate=1, pred_reg=4, yes_pred=0, s_op=MOVI, s_x=0x14, i
 prog += mins(prefix=0x40, gate=1, pred_reg=5, yes_pred=0, s_op=MOVI, s_x=0x15, imm_scalar=0xcafebabe)
 prog += mins(prefix=0x40, gate=1, pred_reg=6, yes_pred=0, s_op=MOVI, s_x=0x16, imm_scalar=0xcafebabe)
 prog += mins(prefix=0x40, gate=1, pred_reg=7, yes_pred=0, s_op=MOVI, s_x=0x17, imm_scalar=0xcafebabe)
+"""
 
 #prog += mins(prefix=0x800, s_op=UNK, s_x=1, s_y=0xc, imm_scalar=0x13371336)
 #prog += mins(prefix=0x800, s_op=UNK, s_x=2, s_y=0xc, imm_scalar=0x13371337)
@@ -197,9 +237,9 @@ prog += mins(prefix=0x40, gate=1, pred_reg=7, yes_pred=0, s_op=MOVI, s_x=0x17, i
 #prog += mins(prefix=0x10, vs_reg=7, v_op=5, imm_offset=1)
 #prog += mins(prefix=0x10, vs_reg=8, v_op=5, imm_offset=2)
 
-prog += mins(prefix=0x40, s_op=MOVI, s_x=9, imm_scalar=4)  # this one has a small range
-prog += mins(prefix=0x40, vs_reg=9, v_op=5, v_offset=3)
-prog += mins(prefix=0x40, v_op=6)
+prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0x1b, imm_scalar=4)  # this one has a small range
+prog += mins(enable_scalar=0x1, vs_reg=0x1b, v_op=5, v_offset=3)
+prog += mins(enable_scalar=0x1, v_op=6)
 
 # send "output tensor" (EP 1)
 """
@@ -234,9 +274,9 @@ prog += mins(prefix=0xad, imm_size=2, imm_offset=8, imm_scalar=0x20000000)
 """
 
 # add start at the end
-prog =  mins(prefix=0xf80>>5, imm_size=(len(prog)+1)*0x10) + prog  # start
-prog += mins(prefix=0x842) # halt
-prog += mins(prefix=0xfc0>>5, imm_size=0x10)  # end
+prog =  mins(early=0x3c, enable_scalar=1, imm_size=(len(prog)+1)*0x10) + prog  # start
+prog += mins(early=0x2, enable_scalar=1, prefix=0x10) # halt
+prog += mins(early=0x3e, enable_scalar=1, imm_size=0x10)  # end
 prog = b''.join(prog)
 hexdump(prog)
 
