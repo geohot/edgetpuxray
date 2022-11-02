@@ -1,0 +1,22 @@
+I spent some time looking at the decompiled edgetpu_compiler.
+I saw a few refenreces to llvm in there, specificaly to llvm::mlir, so i went looking on the web for that library.
+Found it here https://github.com/llvm/llvm-project/tree/main/mlir/lib
+It seams like the people who built the edgetpu compiler used the mlir lib.
+I started comparing strings in the source and from that I managed to identify some of the functions.
+With the class definitions from the llvm project and some correctly placed breakpoints,
+one should be able to figurue out what ops are defined and more.
+
+The most interesting function that i managed to identify that i think would benifit from some breakpoints is:
+RegisteredOperationName::insert(
+    StringRef name, Dialect &dialect, TypeID typeID,
+    ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
+    VerifyInvariantsFn &&verifyInvariants,
+    VerifyRegionInvariantsFn &&verifyRegionInvariants, FoldHookFn &&foldHook,
+    GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
+    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
+    ArrayRef<StringRef> attrNames,
+    PopulateDefaultAttrsFn &&populateDefaultAttrs)
+  
+  
+Since most functions seam to come more or less in the order that they where writen in the .cpp files
+it should be quite easy to identify the funcitons that are inbetwen the already indentified functions.
