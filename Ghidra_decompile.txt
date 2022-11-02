@@ -6,7 +6,7 @@ I started comparing strings in the source and from that I managed to identify so
 With the class definitions from the llvm project and some correctly placed breakpoints,
 one should be able to figurue out what ops are defined and more.
 
-The most interesting function that i managed to identify that i think would benifit from some breakpoints is:
+The most interesting function that i managed to identify that i think would benefit from some breakpoints is(located at 0x00839dc0 in Ghidra):
 RegisteredOperationName::insert(
     StringRef name, Dialect &dialect, TypeID typeID,
     ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
@@ -19,4 +19,7 @@ RegisteredOperationName::insert(
   
   
 Since most functions seam to come more or less in the order that they where writen in the .cpp files
-it should be quite easy to identify the funcitons that are inbetwen the already indentified functions.
+it should be quite easy to identify the functions that are inbetwen the already indentified functions.
+
+Download the Ghidra project zip file here: (Press file -> import file) to import to project
+https://drive.google.com/file/d/1JAHxwpnjEb6t31JE8Jkw0mSkAHJD4547/view?usp=sharing
