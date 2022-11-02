@@ -9,7 +9,8 @@ import tensorflow as tf
 # Create a model using high-level tf.keras.* APIs
 model = tf.keras.models.Sequential([
     #tf.keras.layers.ReLU(input_shape=[1])
-    tf.keras.layers.Dense(units=8, input_shape=[1], use_bias=False),
+    #tf.keras.layers.Dense(units=8, input_shape=[1], use_bias=False),
+    tf.keras.layers.Dense(units=0x20, input_shape=[1], use_bias=False),
     #tf.keras.layers.Rescaling(4, input_shape=[1])
     #tf.keras.layers.Dense(units=1, input_shape=[1], use_bias=False),
     #tf.keras.layers.Dense(units=16, activation='relu'),
@@ -30,7 +31,7 @@ root = tf.train.Checkpoint()
 #root.f = tf.function(lambda g_input: tf.nn.relu(g_input))
 root.f = tf.function(lambda g_input: g_input*2) #+10)
 #root.f = tf.function(lambda x: tf.nn.relu(x)-1)
-input_data = tf.constant(1., shape=[0x80])
+input_data = tf.constant(1., shape=[0x20])
 to_save = root.f.get_concrete_function(input_data)
 print(to_save)
 
