@@ -99,35 +99,53 @@ if __name__ == "__main__":
   write_register(dev, 'descr_ep', b'\xf0\x00\x00\x00\x00\x00\x00\x00')
   write_register(dev, 'multi_bo_ep', b'\x00\x00\x00\x00\x00\x00\x00\x00')
   write_register(dev, 'outfeed_chunk_length', b'\x80\x00\x00\x00\x00\x00\x00\x00')
-  write_register(dev, 'avDataPopRunControl', q(1))
-  write_register(dev, 'parameterPopRunControl', q(1))
-  write_register(dev, 'infeedRunControl', q(1))
-  write_register(dev, 'outfeedRunControl', q(1))
   write_register(dev, 'tileconfig0', q(0x7f))
-  write_register(dev, 'opRunControl', q(1))
-  write_register(dev, 'narrowToWideRunControl', q(1))
-  write_register(dev, 'wideToNarrowRunControl', q(1))
-  write_register(dev, 'meshBus0RunControl', q(1))
-  write_register(dev, 'meshBus1RunControl', q(1))
-  write_register(dev, 'meshBus2RunControl', q(1))
-  write_register(dev, 'meshBus3RunControl', q(1))
-  write_register(dev, 'ringBusConsumer0RunControl', q(1))
-  write_register(dev, 'ringBusConsumer1RunControl', q(1))
-  write_register(dev, 'ringBusProducerRunControl', q(1))
-  write_register(dev, 'fatal_err_int_control', q(1))
-  write_register(dev, 'top_level_int_0_control', q(1))
-  write_register(dev, 'top_level_int_1_control', q(1))
-  write_register(dev, 'top_level_int_2_control', q(1))
-  write_register(dev, 'top_level_int_3_control', q(1))
+
+  # NOTE: status packets still work with this disabled
+  enable_in_out = 1
+  write_register(dev, 'avDataPopRunControl', q(enable_in_out))
+  write_register(dev, 'parameterPopRunControl', q(enable_in_out))
+  write_register(dev, 'infeedRunControl', q(enable_in_out))
+  write_register(dev, 'outfeedRunControl', q(enable_in_out))
+  write_register(dev, 'opRunControl', q(enable_in_out))
+
+  # scalar -> vector, vector -> scalar
+  enable_narrow_x_wide = 1
+  write_register(dev, 'narrowToWideRunControl', q(enable_narrow_x_wide))
+  write_register(dev, 'wideToNarrowRunControl', q(enable_narrow_x_wide))
+
+  # what's the mesh bus?
+  enable_mesh_bus = 1
+  write_register(dev, 'meshBus0RunControl', q(enable_mesh_bus))
+  write_register(dev, 'meshBus1RunControl', q(enable_mesh_bus))
+  write_register(dev, 'meshBus2RunControl', q(enable_mesh_bus))
+  write_register(dev, 'meshBus3RunControl', q(enable_mesh_bus))
+
+  # what's the ring bus?
+  enable_ring_bus = 1
+  write_register(dev, 'ringBusConsumer0RunControl', q(enable_ring_bus))
+  write_register(dev, 'ringBusConsumer1RunControl', q(enable_ring_bus))
+  write_register(dev, 'ringBusProducerRunControl', q(enable_ring_bus))
+  
+  # where are interrupts used?
+  enable_int = 1
+  write_register(dev, 'fatal_err_int_control', q(enable_int))
+  write_register(dev, 'top_level_int_0_control', q(enable_int))
+  write_register(dev, 'top_level_int_1_control', q(enable_int))
+  write_register(dev, 'top_level_int_2_control', q(enable_int))
+  write_register(dev, 'top_level_int_3_control', q(enable_int))
+
   write_register(dev, 'omc0_d4', b'\x01\x00\x00\x80')
   write_register(dev, 'rambist_ctrl_1', b'\x7f\x00\x00\x00')
   write_register(dev, 'scu_ctr_7', b'\x3f\x00\x00\x00')
+  write_register(dev, 'omc0_d8', b'\x00\x00\x00\x80')
+  
+  # for PCI-E
   write_register(dev, 'slv_abm_en', b'\x01\x00\x00\x00')
   write_register(dev, 'mst_abm_en', b'\x01\x00\x00\x00')
   write_register(dev, 'slv_err_resp_isr_mask', b'\x03\x00\x00\x00')
   write_register(dev, 'mst_err_resp_isr_mask', b'\x03\x00\x00\x00')
-  write_register(dev, 'omc0_d8', b'\x00\x00\x00\x80')
-  
+
   read_register(dev, 'currentPc', 8)
 
   # single step mode

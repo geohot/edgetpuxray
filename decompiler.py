@@ -7,12 +7,13 @@ from collections import defaultdict
 from colored import stylize, fg
 altdat = []
 
-#dat = open("programs/div2.coral", "rb").read()
+dat = open("programs/div2.coral", "rb").read()
+altdat = open("programs/relu.coral", "rb").read()
 #dat = open("programs/inception_0.coral", "rb").read()
 #altdat = open("programs/add1.coral", "rb").read()
 #dat = open("programs/matmul_256.coral", "rb").read()
-dat = open("programs/div2_10_aarch64.coral", "rb").read()
-altdat = open("programs/div2_20_aarch64.coral", "rb").read()
+#dat = open("programs/div2_10_aarch64.coral", "rb").read()
+#altdat = open("programs/div2_20_aarch64.coral", "rb").read()
 #dat = open("programs/dense_1_8_mul.coral", "rb").read()
 
 # CORAL NOTES
@@ -44,7 +45,8 @@ ins = BitStruct(
   "enable_scalar" / BitsInteger(1),
 
   # this is probably the branch engine
-  "branch" / BitsInteger(6),
+  "branch" / BitsInteger(5),
+  "unk_0" / BitsInteger(1),
 
   # these three are correct, not always :(
   "yes_pred" / BitsInteger(1),
@@ -169,7 +171,18 @@ MOVI = 0x2f   # s_x <- imm_scalar
 
 print("my program")
 prog = []
+#prog += mins(branch=0x20)
 prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0, imm_scalar=0xabab)
+prog += mins(v_op_2=1, vs_reg_w=6)  # set s6 = 0x7F800000
+prog += mins(enable_vector=1, vs_reg_v1=0xc)
+prog += mins(enable_vector=1, vs_reg_v1=0xd, v_op=3, vs_reg=0x1d, imm_size=0xfff, unk_3=0x3ffa0)
+
+#prog += mins(vs_reg_v1=0x14, imm_size=0xfff, v_op=3, vs_reg=0x1d, s_op=0x3f, s_x=0x1f, s_y=1, imm_scalar=0x1fffd000, unk_3=0x3ffa0)
+#prog += mins(vs_reg_v1=3, imm_size=6, v_offset=0xfe, v_cmd=0x1d, vs_reg=0xf, s_op=0x1f, imm_scalar=0x21bf80)
+
+
+
+
 #prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0xb, imm_scalar=0xabab, vs_reg=0, v_op_2=7, vs_reg_w=5)
 #prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0, imm_scalar=0xabab)
 
@@ -273,14 +286,14 @@ prog += mins(enable_scalar=0x1, vs_reg=0x1b, v_op=0xa, v_offset=3)
 prog += mins(enable_scalar=0x1, v_op=0xc)
 
 # add start at the end
-prog =  mins(branch=0x3c, enable_scalar=1, imm_size=(len(prog)+5)*0x10*8) + prog  # start
-prog += mins(branch=2, enable_scalar=1)    # halt
+prog =  mins(branch=0x3c>>1, enable_scalar=1, imm_size=(len(prog)+5)*0x10*8) + prog  # start
+prog += mins(branch=2>>1, enable_scalar=1)    # halt
 # 4 nops
 prog += mins(enable_scalar=1)
 prog += mins(enable_scalar=1)
 prog += mins(enable_scalar=1)
 prog += mins(enable_scalar=1)
-prog += mins(branch=0x3e, enable_scalar=1, imm_size=0x10*8)  # end
+prog += mins(branch=0x3e>>1, enable_scalar=1, imm_size=0x10*8)  # end
 prog = b''.join(prog)
 hexdump(prog)
 
