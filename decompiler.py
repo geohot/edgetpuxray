@@ -6,8 +6,8 @@ from construct import BitStruct, BitsInteger
 from collections import defaultdict
 from colored import stylize, fg
 
-dat = open("programs/div2_40.coral", "rb").read()
-altdat = open("programs/div2_20.coral", "rb").read()
+dat = open("programs/div2.coral", "rb").read()
+altdat = open("programs/relu.coral", "rb").read()
 #dat = open("programs/weight_copy_in_0x80.coral", "rb").read()
 #dat = open("programs/dense_1_8_mul.coral", "rb").read()
 
@@ -50,24 +50,29 @@ altdat = open("programs/div2_20.coral", "rb").read()
 
 ins = BitStruct(
   "unk_3" / BitsInteger(18),
-  "vs_reg_2" / BitsInteger(5),
+  "vs_reg_w" / BitsInteger(5), # confirmed as reg
   "v_op_2" / BitsInteger(3),
 
   # these 4 are correct
   "imm_scalar" / BitsInteger(32),
-  "s_y" / BitsInteger(5),
-  "s_x" / BitsInteger(5),
+  "s_y" / BitsInteger(5),  # confirmed as reg
+  "s_x" / BitsInteger(5),  # confirmed as reg
   "s_op" / BitsInteger(6),
 
   # unknown?
-  "vs_reg" / BitsInteger(5),
+  "vs_reg" / BitsInteger(5),  # confirmed as reg
   "v_offset" / BitsInteger(13),
   # v_op and imm_size are fused with prefix = 0x7c
   "v_op" / BitsInteger(4),
-  "imm_size" / BitsInteger(10),
-  "prefix" / BitsInteger(10),
+  "imm_size" / BitsInteger(13),
+  "vs_reg_v1" / BitsInteger(5),  # confirmed as reg
+
+  # both of these seem gated on the preds
+  "enable_vector" / BitsInteger(2),
   "enable_scalar" / BitsInteger(1),
-  "early" / BitsInteger(6),
+
+  # this is probably the branch engine
+  "branch" / BitsInteger(6),
 
   # these three are correct, not always :(
   "yes_pred" / BitsInteger(1),
@@ -94,23 +99,28 @@ def dec(my_dat, off=-1, cmp=None):
     prt = []
     for k,v in list(dd.items())[::-1]:
       if k == "_io": continue
-      if k not in ['gate', 'pred_reg', 'yes_pred']:
+      if k not in ['gate', 'pred_reg', 'yes_pred', 'enable_vector', 'enable_scalar']:
         if cmp and dd_alt[k] != dd[k]:
           prt.append(stylize("%8s:%8x" % (k,v), fg('red') if did_swap else fg('green')))
           if not did_swap: has_diff = True
         else:
           prt.append("%8s:%8x" % (k,v))
+    ff = ""
+    if dd['enable_scalar']:
+      ff += "S"
+    if dd['enable_vector']:
+      ff += "V"+str(dd['enable_vector'])
     pp = ""
     if dd['gate']:
       if not dd['yes_pred']:
         pp += "!"
       pp += str(dd['pred_reg'])
 
-    print(f"{off:4X} {pp:4s}", end="")
+    print(f"{off:4X} {ff:3s}{pp:5s}", end="")
     more = ""
     if dd['v_op'] == 6:
       more = "USB ACT"
-    elif dd['enable_scalar'] and dd['early'] == 0:
+    elif dd['enable_scalar'] and dd['branch'] == 0:
       imm = f"0x{dd['imm_scalar']:X}" if dd['s_op'] & 0x20 else f"s{dd['imm_scalar']}"
       more = f"{'C' if dd['s_op']&0xF in [9,10,11,12,13,14] else 's'}{dd['s_x']} <- s{dd['s_y']} {ops[dd['s_op']&0xF]} {imm}"
     print("%-30s" % more, f','.join(prt))
@@ -186,7 +196,16 @@ MOVI = 0x2f   # s_x <- imm_scalar
 
 print("my program")
 prog = []
-prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0xb, imm_scalar=0xabab, vs_reg=0, v_op_2=7, vs_reg_2=5)
+#prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0xb, imm_scalar=0xabab, vs_reg=0, v_op_2=7, vs_reg_w=5)
+prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0, imm_scalar=0xabab)
+
+prog += mins(enable_scalar=1, enable_vector=1,
+  vs_reg_v1=0x12, imm_size=0xff, v_op=1, v_offset=1, vs_reg=1,
+  s_op=ADDI, s_x=4, s_y=1, imm_scalar=0xeeff,
+  unk_3=0x3ffff)
+#prog += mins(enable_vector=1, vs_reg_v1=0x13, unk_3=0x3ffff)
+#prog += mins(enable_vector=1, vs_reg_v1=0x14)
+#prog += mins(enable_scalar=0, vs_reg_v1=0x13, enable_vector=2, s_op=MOVI, s_x=0xb, imm_scalar=0xabab, vs_reg=0, v_op_2=0, vs_reg_w=0)
 #prog += mins(prefix=0x10, s_op=MOVI, s_x=0xc, imm_scalar=0x13371337)
 #prog += mins(prefix=0x10, s_op=SUB, s_x=2, s_y=0xc, imm_scalar=0xb)
 
@@ -274,9 +293,9 @@ prog += mins(prefix=0xad, imm_size=2, imm_offset=8, imm_scalar=0x20000000)
 """
 
 # add start at the end
-prog =  mins(early=0x3c, enable_scalar=1, imm_size=(len(prog)+1)*0x10) + prog  # start
-prog += mins(early=0x2, enable_scalar=1, prefix=0x10) # halt
-prog += mins(early=0x3e, enable_scalar=1, imm_size=0x10)  # end
+prog =  mins(branch=0x3c, enable_scalar=1, imm_size=(len(prog)+1)*0x10*8) + prog  # start
+prog += mins(branch=2, enable_scalar=1)    # halt
+prog += mins(branch=0x3e, enable_scalar=1, imm_size=0x10*8)  # end
 prog = b''.join(prog)
 hexdump(prog)
 
