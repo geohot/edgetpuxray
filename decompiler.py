@@ -16,6 +16,7 @@ altdat = open("programs/relu.coral", "rb").read()
 #altdat = open("programs/div2_20_aarch64.coral", "rb").read()
 #dat = open("programs/dense_1_8_mul.coral", "rb").read()
 
+# https://patentimages.storage.googleapis.com/78/26/c0/f8767a76a0342e/US20190050717A1.pdf
 # CORAL NOTES
 # 32 scalar registers, 32-bits?
 # 8 predicate registers
