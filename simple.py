@@ -64,41 +64,10 @@ def llsend(dev, dat, num):
     ll -= 0x100000
   dev.write(1, dat[off:off+ll])
 
-setup = """
-libusb_control_transfer(0x40, 0, reg:0x 44158, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 44198, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 441d8, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 44218, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 48788, 0x16f4f2ce8, wLength: 8) : 7f 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 400c0, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 40150, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 40110, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 40250, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 40298, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 402e0, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 40328, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 40190, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 401d0, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 40210, 0x16f4f2ce8, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 4c060, 0x16f4f2d88, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 4c070, 0x16f4f2d38, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 4c080, 0x16f4f2d38, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 4c090, 0x16f4f2d38, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 0, reg:0x 4c0a0, 0x16f4f2d38, wLength: 8) : 01 00 00 00 00 00 00 00
-libusb_control_transfer(0x40, 1, reg:0x 1a0d4, 0x16f4f2d2c, wLength: 4) : 01 00 00 80
-libusb_control_transfer(0x40, 1, reg:0x 1a704, 0x16f4f2d1c, wLength: 4) : 7f 00 00 00
-libusb_control_transfer(0x40, 1, reg:0x 1a33c, 0x16f4f2d1c, wLength: 4) : 3f 00 00 00
-libusb_control_transfer(0x40, 1, reg:0x 1a500, 0x16f4f2d4c, wLength: 4) : 01 00 00 00
-libusb_control_transfer(0x40, 1, reg:0x 1a600, 0x16f4f2d4c, wLength: 4) : 01 00 00 00
-libusb_control_transfer(0x40, 1, reg:0x 1a558, 0x16f4f2d4c, wLength: 4) : 03 00 00 00
-libusb_control_transfer(0x40, 1, reg:0x 1a658, 0x16f4f2d4c, wLength: 4) : 03 00 00 00
-libusb_control_transfer(0x40, 1, reg:0x 1a0d8, 0x16f4f2d2c, wLength: 4) : 00 00 00 80
-"""
-
 def write_register(dev, name, data):
   regnum = iregs[name]
   bReq = int(regnum>>16 == 1)
-  print(f"writing {name:30s} {bReq} 0x{regnum:X} with {len(data)} bytes")
+  print(f"writing {name:30s} {bReq} 0x{regnum:X} with {len(data)} bytes {data}")
   ret = dev.ctrl_transfer(0x40, bReq, regnum & 0xFFFF, regnum >> 16, data)
 
 def read_register(dev, name, llen, offset=0, debug=True):
@@ -130,22 +99,34 @@ if __name__ == "__main__":
   write_register(dev, 'descr_ep', b'\xf0\x00\x00\x00\x00\x00\x00\x00')
   write_register(dev, 'multi_bo_ep', b'\x00\x00\x00\x00\x00\x00\x00\x00')
   write_register(dev, 'outfeed_chunk_length', b'\x80\x00\x00\x00\x00\x00\x00\x00')
-  
-
-  # setup registers
-  for s in setup.strip().split("\n"):
-    reqType, bReq = s.split("(")[1].split(",")[0:2]
-    reqType, bReq = int(reqType, 16), int(bReq)
-
-    s = s.split("reg:0x ")[1]
-    regnum = int("0x"+s.split(",")[0].strip(), 16)
-    data = binascii.unhexlify(s.split(" : ")[1].replace(" ", ""))
-    wVal = regnum & 0xFFFF
-    wIndex = regnum >> 16
-    if reqType == 0xC0:
-      data = len(data)
-    ret = dev.ctrl_transfer(reqType, bReq, wVal, wIndex, data)
-    print(hex(reqType), bReq, hex(regnum), regs[regnum], data, ret)
+  write_register(dev, 'avDataPopRunControl', q(1))
+  write_register(dev, 'parameterPopRunControl', q(1))
+  write_register(dev, 'infeedRunControl', q(1))
+  write_register(dev, 'outfeedRunControl', q(1))
+  write_register(dev, 'tileconfig0', q(0x7f))
+  write_register(dev, 'opRunControl', q(1))
+  write_register(dev, 'narrowToWideRunControl', q(1))
+  write_register(dev, 'wideToNarrowRunControl', q(1))
+  write_register(dev, 'meshBus0RunControl', q(1))
+  write_register(dev, 'meshBus1RunControl', q(1))
+  write_register(dev, 'meshBus2RunControl', q(1))
+  write_register(dev, 'meshBus3RunControl', q(1))
+  write_register(dev, 'ringBusConsumer0RunControl', q(1))
+  write_register(dev, 'ringBusConsumer1RunControl', q(1))
+  write_register(dev, 'ringBusProducerRunControl', q(1))
+  write_register(dev, 'fatal_err_int_control', q(1))
+  write_register(dev, 'top_level_int_0_control', q(1))
+  write_register(dev, 'top_level_int_1_control', q(1))
+  write_register(dev, 'top_level_int_2_control', q(1))
+  write_register(dev, 'top_level_int_3_control', q(1))
+  write_register(dev, 'omc0_d4', b'\x01\x00\x00\x80')
+  write_register(dev, 'rambist_ctrl_1', b'\x7f\x00\x00\x00')
+  write_register(dev, 'scu_ctr_7', b'\x3f\x00\x00\x00')
+  write_register(dev, 'slv_abm_en', b'\x01\x00\x00\x00')
+  write_register(dev, 'mst_abm_en', b'\x01\x00\x00\x00')
+  write_register(dev, 'slv_err_resp_isr_mask', b'\x03\x00\x00\x00')
+  write_register(dev, 'mst_err_resp_isr_mask', b'\x03\x00\x00\x00')
+  write_register(dev, 'omc0_d8', b'\x00\x00\x00\x80')
   
   read_register(dev, 'currentPc', 8)
 

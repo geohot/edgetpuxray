@@ -10,6 +10,7 @@ altdat = []
 #dat = open("programs/div2.coral", "rb").read()
 #dat = open("programs/inception_0.coral", "rb").read()
 #altdat = open("programs/add1.coral", "rb").read()
+#dat = open("programs/matmul_256.coral", "rb").read()
 dat = open("programs/div2_10_aarch64.coral", "rb").read()
 altdat = open("programs/div2_20_aarch64.coral", "rb").read()
 #dat = open("programs/dense_1_8_mul.coral", "rb").read()
@@ -168,8 +169,8 @@ MOVI = 0x2f   # s_x <- imm_scalar
 
 print("my program")
 prog = []
+prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0, imm_scalar=0xabab)
 #prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0xb, imm_scalar=0xabab, vs_reg=0, v_op_2=7, vs_reg_w=5)
-#prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0, imm_scalar=0xabab)
 #prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0, imm_scalar=0xabab)
 
 #for i in range(8): prog += mins(v_op_2=i, vs_reg_w=0x10+i, imm_scalar=0x20000000, unk_3=0x20002)
@@ -232,10 +233,7 @@ prog += mins(prefix=0x40, gate=1, pred_reg=7, yes_pred=0, s_op=MOVI, s_x=0x17, i
 #prog += mins(prefix=0x10, vs_reg=8, v_op=5, imm_offset=2)
 
 
-prog = mdat[4:0x1a]
-#prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0x1b, imm_scalar=4)  # this one has a small range
-#prog += mins(enable_scalar=0x1, vs_reg=0x1b, v_op=0xa, v_offset=3)
-#prog += mins(enable_scalar=0x1, v_op=0xc)
+#prog = mdat[4:0x1a]
 
 # send "output tensor" (EP 1)
 """
@@ -269,6 +267,11 @@ prog += mins()   #prog += mins(imm_scalar=0xa2a600, unk_3=0x1000100)
 prog += mins(prefix=0xad, imm_size=2, imm_offset=8, imm_scalar=0x20000000)
 """
 
+# min USB status output
+prog += mins(enable_scalar=0x1, s_op=MOVI, s_x=0x1b, imm_scalar=4)  # this one has a small range
+prog += mins(enable_scalar=0x1, vs_reg=0x1b, v_op=0xa, v_offset=3)
+prog += mins(enable_scalar=0x1, v_op=0xc)
+
 # add start at the end
 prog =  mins(branch=0x3c, enable_scalar=1, imm_size=(len(prog)+5)*0x10*8) + prog  # start
 prog += mins(branch=2, enable_scalar=1)    # halt
@@ -284,7 +287,7 @@ hexdump(prog)
 for i in range(0, len(prog), 0x10):
   dec(prog[i:i+0x10], i)
 
-prog = dat
+#prog = dat
 
 with open("programs/custom.coral", "wb") as f:
   f.write(prog)

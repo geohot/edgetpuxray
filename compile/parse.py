@@ -77,5 +77,7 @@ for i in range(dat.SerializedExecutablesLength()):
     #print(dir(see))
     print(hex(see.BitstreamLength()), see.BitstreamLength(), [print_field_offset(see.FieldOffsets(i)) for i in range(see.FieldOffsetsLength())])
     hexdump(see.BitstreamAsNumpy()[0:0x20])
-    with open(f"/tmp/prog_{i}_{j}", "wb") as f:
+    fn = f"/tmp/prog_{i}_{j}"
+    with open(fn, "wb") as f:
       f.write(see.BitstreamAsNumpy())
+      print(f"writing {fn}")
