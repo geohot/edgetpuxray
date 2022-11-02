@@ -26,21 +26,19 @@ def representative_dataset():
     yield [data.astype(np.float32)]
 
 # Convert the model.
-"""
 root = tf.train.Checkpoint()
 #root.f = tf.function(lambda g_input: tf.nn.relu(g_input))
-root.f = tf.function(lambda g_input: g_input*2) #+10)
+root.f = tf.function(lambda g_input: g_input-1) #+10)
 #root.f = tf.function(lambda x: tf.nn.relu(x)-1)
-input_data = tf.constant(1., shape=[0x20])
+input_data = tf.constant(1., shape=[1])
 to_save = root.f.get_concrete_function(input_data)
 print(to_save)
-"""
 
 #print(to_save(tf.ones(1)*2))
 #exit(-1)
 
-#converter = tf.lite.TFLiteConverter.from_concrete_functions([to_save])
-converter = tf.lite.TFLiteConverter.from_keras_model(model)
+converter = tf.lite.TFLiteConverter.from_concrete_functions([to_save])
+#converter = tf.lite.TFLiteConverter.from_keras_model(model)
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
 converter.representative_dataset = representative_dataset
 
