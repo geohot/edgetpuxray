@@ -59,7 +59,8 @@ I downloaded the llvm 10 and managed to identify the CommandLineParser::printOpt
  https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1005713
  
  and we can download the specific llvm version that we need here
- github.com/llvm/llvm-project/archive/7e825abd5704ce28b166f9463d4bd304348fd2a.tar.gz
+ github.com/llvm/llvm-project/archive/7e825abd5704ce28b166f9463d4bd304348fd2a9.tar.gz
+ https://codeload.github.com/llvm/llvm-project/tar.gz/7e825abd5704ce28b166f9463d4bd304348fd2a9
  
  
  I also found this issue on github https://github.com/tensorflow/tensorflow/issues/41850
@@ -70,4 +71,21 @@ I downloaded the llvm 10 and managed to identify the CommandLineParser::printOpt
 
 Anyway next step would be to compile llvm and TensorFlow 2.3.0-rc2 with debug symbols. So that we can use Ghidra to look at the structs that are passed in and out of functions.
  
- 
+wget https://github.com/tensorflow/tensorflow/archive/refs/tags/v2.3.0-rc2.tar.gz
+tar xvfz v2.3.0-rc2.tar.gz
+sudo apt install python3-dev python3-pip
+pip install pip numpy wheel packaging requests opt_einsum
+pip install keras_preprocessing --no-deps
+sudo apt-get npm
+sudo npm install -g @bazel/bazelisk
+bazelisk
+./configure
+
+We need to alter the file ./workspace.bzl so that the llvm urls work, add this at the correct place.
+"https://storage.googleapis.com/mirror.tensorflow.org/codeload.github.com/llvm/llvm-project/tar.gz/7e825abd5704ce28b166f9463d4bd304348fd2a9",
+"https://codeload.github.com/llvm/llvm-project/tar.gz/7e825abd5704ce28b166f9463d4bd304348fd2a9"
+and 
+type = 'tar.gz', to the tf_http_archive function
+
+bazel build --config=dbg //tensorflow/compiler/tf2xla
+
