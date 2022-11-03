@@ -89,3 +89,14 @@ type = 'tar.gz', to the tf_http_archive function
 
 bazel build --config=dbg //tensorflow/compiler/tf2xla
 
+Lets build somthing else:
+bazel build --config=dbg //tensorflow/compiler/mlir/tensorflow:tpu_rewrite_device_util
+
+Managed to compile everything, lets continue.
+
+Opened the compiled files in Ghidra, exported struct definitions and imported them to the edgetpu_compiler Ghidra file.
+
+After doing this i realized that there has been large changes in llvm. My original analysis was done against the lastest llvm version, so i got a few things wrong.
+The function that i previously thought i had found which was named RegisteredOperationName::insert was not what i thought. In this older verion of llvm things look diffrent. What i had found earlier was actually mlir::Dialect::addOperation.
+
+ 
