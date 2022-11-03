@@ -40,3 +40,30 @@ But that seams to be the llvm version that was used to compile the compiler itse
 There is also this string with build info "gcc-4.X.Y-crosstool-v18-x86_64-linux-gnu-libcxx-glibc" 
 
 The binary was realesed 8 Jul 2020 this means that the highest llvm version they could have used was llvm LLVM 10.0.1-rc2 which was released at 26 Jun 2020.
+
+I downloaded the llvm 10 and managed to identify the CommandLineParser::printOptionValues function it contains information about what version of llvm it is in the form of some print statments
+     OS << "LLVM (http://llvm.org/):\n  ";
+ 10 #endif
+  9     OS << PACKAGE_NAME << " version " << PACKAGE_VERSION;
+  8 #ifdef LLVM_VERSION_INFO
+  7     OS << " " << LLVM_VERSION_INFO;
+  6 #endif
+  5     OS << "\n  ";
+  
+  
+  PACKAGE_NAME = "LLVM"
+  PACKAGE_VERSION = "google3-trunk"
+  LLVM_VERSION_INFO = "7e825abd5704ce28b166f9463d4bd304348fd2a"
+  
+ If we google that version we get this bug report
+ https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1005713
+ 
+ and we can download the specific llvm version that we need here
+ github.com/llvm/llvm-project/archive/7e825abd5704ce28b166f9463d4bd304348fd2a.tar.gz
+ 
+ 
+ I also find this issue on github https://github.com/tensorflow/tensorflow/issues/41850
+ 
+ Both these bugreports are indications that it might be a good idea to just look at tensorflow instead of just llvm.
+ 
+ 
