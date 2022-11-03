@@ -27,3 +27,16 @@ https://drive.google.com/file/d/1JAHxwpnjEb6t31JE8Jkw0mSkAHJD4547/view?usp=shari
 A good next step would probably be to build the llvm mlir project with symbols, then import those symbols in to ghidra so that Ghidra can decode all the structs and classes that get passed in to the functions. For example the RegisteredOperationName::insert function returns a mlir::Operation class witch has varius intresting properties.
 
 A note on that, is that back when i did string matching of the binary and the source file, there was strings that should have been in the binary based on what i saw in the source that where not. I asume the difference was due to the fact that llvm mlir library that is used in the binary is not the latest version. It would be good to identify which version of the mlir library is used in the binary.
+
+A new note..
+Found a string in the binary that indicates build info.
+"Chromium OS 10.0_pre380035_p20200212-r9 clang version 10.0.0 (/var/cache/chromeos-cache/distfiles/host/egit-src/llvm-project a21beccea2020f950845cbb68db663d0737e174c)"
+
+That version of llvm can be downloaded here:
+github.com/llvm/llvm-project/archive/a21beccea2020f950845cbb68db663d0737e174c.tar.gz
+
+But that seams to be the llvm version that was used to compile the compiler itself, not the version of llvm that it links to.
+
+There is also this string with build info "gcc-4.X.Y-crosstool-v18-x86_64-linux-gnu-libcxx-glibc" 
+
+The binary was realesed 8 Jul 2020 this means that the highest llvm version they could have used was llvm LLVM 10.0.1-rc2 which was released at 26 Jun 2020.
