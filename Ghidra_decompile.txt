@@ -17,9 +17,11 @@ RegisteredOperationName::insert(
     ArrayRef<StringRef> attrNames,
     PopulateDefaultAttrsFn &&populateDefaultAttrs)
   
-  
+
 Since most functions seam to come more or less in the order that they where writen in the .cpp files
 it should be quite easy to identify the functions that are inbetwen the already indentified functions.
 
 Download the Ghidra project zip file here: (Press file -> import file) to import to project
 https://drive.google.com/file/d/1JAHxwpnjEb6t31JE8Jkw0mSkAHJD4547/view?usp=sharing
+
+A good next step would probably be to build the llvm mlir project with symbols, then import those symbols in to ghidra so that Ghidra can decode all the structs and classes that get passed in to the functions. For example the RegisteredOperationName::insert function returns a mlir::Operation class witch has varius intresting properties.
