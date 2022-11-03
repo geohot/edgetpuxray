@@ -62,8 +62,12 @@ I downloaded the llvm 10 and managed to identify the CommandLineParser::printOpt
  github.com/llvm/llvm-project/archive/7e825abd5704ce28b166f9463d4bd304348fd2a.tar.gz
  
  
- I also find this issue on github https://github.com/tensorflow/tensorflow/issues/41850
+ I also found this issue on github https://github.com/tensorflow/tensorflow/issues/41850
  
- Both these bugreports are indications that it might be a good idea to just look at tensorflow instead of just llvm.
+ Both these bugreports are indications that it might be a good idea to look at tensorflow instead of just llvm.
+ 
+ So we take a look at TensorFlow 2.3.0-rc2 which was released 18 Jul 2020 it seams like a good candidate for what they might have used back when they compiled the edgetpu_compiler.
+
+Anyway next step would be to compile llvm and TensorFlow 2.3.0-rc2 with debug symbols. So that we can use Ghidra to look at the structs that are passed in and out of functions.
  
  
