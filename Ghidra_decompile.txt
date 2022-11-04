@@ -100,3 +100,11 @@ After doing this i realized that there has been large changes in llvm. My origin
 The function that i previously thought i had found which was named RegisteredOperationName::insert was not what i thought. In this older verion of llvm things look diffrent. What i had found earlier was actually mlir::Dialect::addOperation.
 
  
+
+
+I have spent to much time one this now, but one final update.
+My hypotesis on how the compiler works:
+The compiler reads in the Model then converts it it a MLIR dialect that is propriatary google stuff, the dialect is called DarwiNN Layerd or and is shortend to DWL. The DWL dialect is defined throgh multiple calls to the mlir::Dialect::addOperation, each operation gets a name, somthing like dwl.bitcast, or dwl.inter_die_input, dwl.if, dwl.interleave or dwl.const. There is like 40 diffrent operations all defined in the function that i named Register_DWL_Operations(). They are all visible in the Ghidra file.
+After the model is converted to DWL, the compiler does a couple of diffrent optimizatintion and cleaning passes. It seams to register each pass in a function that i named Function_that_registers_optimization_passes(). Some examples of passes are "Lower cwise ops to scalar ops", "dwl check illigal ops" & "dwl normalize tensors". There is about 14 passes of optimization.
+
+When that is all done, some unknown mechanism converts from the mlir format to the bitstream that the TPU eats. It might be worth steping throgh the binary with the Ghidra debuger to see where and how that is managed. But I think i will leave that to someone else.
