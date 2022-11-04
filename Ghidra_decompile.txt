@@ -1,0 +1,110 @@
+I spent some time looking at the decompiled edgetpu_compiler.
+I saw a few refenreces to llvm in there, specificaly to llvm::mlir, so i went looking on the web for that library.
+Found it here https://github.com/llvm/llvm-project/tree/main/mlir/lib
+It seams like the people who built the edgetpu compiler used the mlir lib.
+I started comparing strings in the source and from that I managed to identify some of the functions.
+With the class definitions from the llvm project and some correctly placed breakpoints,
+one should be able to figurue out what ops are defined and more.
+
+The most interesting function that i managed to identify that i think would benefit from some breakpoints is(located at 0x00839dc0 in Ghidra):
+RegisteredOperationName::insert(
+    StringRef name, Dialect &dialect, TypeID typeID,
+    ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
+    VerifyInvariantsFn &&verifyInvariants,
+    VerifyRegionInvariantsFn &&verifyRegionInvariants, FoldHookFn &&foldHook,
+    GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
+    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
+    ArrayRef<StringRef> attrNames,
+    PopulateDefaultAttrsFn &&populateDefaultAttrs)
+  
+
+Since most functions seam to come more or less in the order that they where writen in the .cpp files
+it should be quite easy to identify the functions that are inbetwen the already indentified functions.
+
+Download the Ghidra project zip file here: (Press file -> import file) to import to project
+https://drive.google.com/file/d/1JAHxwpnjEb6t31JE8Jkw0mSkAHJD4547/view?usp=sharing
+
+A good next step would probably be to build the llvm mlir project with symbols, then import those symbols in to ghidra so that Ghidra can decode all the structs and classes that get passed in to the functions. For example the RegisteredOperationName::insert function returns a mlir::Operation class witch has varius intresting properties.
+
+A note on that, is that back when i did string matching of the binary and the source file, there was strings that should have been in the binary based on what i saw in the source that where not. I asume the difference was due to the fact that llvm mlir library that is used in the binary is not the latest version. It would be good to identify which version of the mlir library is used in the binary.
+
+A new note..
+Found a string in the binary that indicates build info.
+"Chromium OS 10.0_pre380035_p20200212-r9 clang version 10.0.0 (/var/cache/chromeos-cache/distfiles/host/egit-src/llvm-project a21beccea2020f950845cbb68db663d0737e174c)"
+
+That version of llvm can be downloaded here:
+github.com/llvm/llvm-project/archive/a21beccea2020f950845cbb68db663d0737e174c.tar.gz
+
+But that seams to be the llvm version that was used to compile the compiler itself, not the version of llvm that it links to.
+
+There is also this string with build info "gcc-4.X.Y-crosstool-v18-x86_64-linux-gnu-libcxx-glibc" 
+
+The binary was realesed 8 Jul 2020 this means that the highest llvm version they could have used was llvm LLVM 10.0.1-rc2 which was released at 26 Jun 2020.
+
+I downloaded the llvm 10 and managed to identify the CommandLineParser::printOptionValues function it contains information about what version of llvm it is in the form of some print statments
+     OS << "LLVM (http://llvm.org/):\n  ";
+ 10 #endif
+  9     OS << PACKAGE_NAME << " version " << PACKAGE_VERSION;
+  8 #ifdef LLVM_VERSION_INFO
+  7     OS << " " << LLVM_VERSION_INFO;
+  6 #endif
+  5     OS << "\n  ";
+  
+  
+  PACKAGE_NAME = "LLVM"
+  PACKAGE_VERSION = "google3-trunk"
+  LLVM_VERSION_INFO = "7e825abd5704ce28b166f9463d4bd304348fd2a"
+  
+ If we google that version we get this bug report
+ https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1005713
+ 
+ and we can download the specific llvm version that we need here
+ github.com/llvm/llvm-project/archive/7e825abd5704ce28b166f9463d4bd304348fd2a9.tar.gz
+ https://codeload.github.com/llvm/llvm-project/tar.gz/7e825abd5704ce28b166f9463d4bd304348fd2a9
+ 
+ 
+ I also found this issue on github https://github.com/tensorflow/tensorflow/issues/41850
+ 
+ Both these bugreports are indications that it might be a good idea to look at tensorflow instead of just llvm.
+ 
+ So we take a look at TensorFlow 2.3.0-rc2 which was released 18 Jul 2020 it seams like a good candidate for what they might have used back when they compiled the edgetpu_compiler.
+
+Anyway next step would be to compile llvm and TensorFlow 2.3.0-rc2 with debug symbols. So that we can use Ghidra to look at the structs that are passed in and out of functions.
+ 
+wget https://github.com/tensorflow/tensorflow/archive/refs/tags/v2.3.0-rc2.tar.gz
+tar xvfz v2.3.0-rc2.tar.gz
+sudo apt install python3-dev python3-pip
+pip install pip numpy wheel packaging requests opt_einsum
+pip install keras_preprocessing --no-deps
+sudo apt-get npm
+sudo npm install -g @bazel/bazelisk
+bazelisk
+./configure
+
+We need to alter the file ./workspace.bzl so that the llvm urls work, add this at the correct place.
+"https://storage.googleapis.com/mirror.tensorflow.org/codeload.github.com/llvm/llvm-project/tar.gz/7e825abd5704ce28b166f9463d4bd304348fd2a9",
+"https://codeload.github.com/llvm/llvm-project/tar.gz/7e825abd5704ce28b166f9463d4bd304348fd2a9"
+and 
+type = 'tar.gz', to the tf_http_archive function
+
+bazel build --config=dbg //tensorflow/compiler/tf2xla
+
+Lets build somthing else:
+bazel build --config=dbg //tensorflow/compiler/mlir/tensorflow:tpu_rewrite_device_util
+
+Managed to compile everything, lets continue.
+
+Opened the compiled files in Ghidra, exported struct definitions and imported them to the edgetpu_compiler Ghidra file.
+
+After doing this i realized that there has been large changes in llvm. My original analysis was done against the lastest llvm version, so i got a few things wrong.
+The function that i previously thought i had found which was named RegisteredOperationName::insert was not what i thought. In this older verion of llvm things look diffrent. What i had found earlier was actually mlir::Dialect::addOperation.
+
+ 
+
+
+I have spent to much time one this now, but one final update.
+My hypotesis on how the compiler works:
+The compiler reads in the Model then converts it it a MLIR dialect that is propriatary google stuff, the dialect is called DarwiNN Layered which is shortend to DWL. The DWL dialect is defined throgh multiple calls to the mlir::Dialect::addOperation, each operation gets a name, somthing like dwl.bitcast, or dwl.inter_die_input, dwl.if, dwl.interleave or dwl.const. There is like 40 diffrent operations all defined in the function that i named Register_DWL_Operations(). They are all visible in the Ghidra file.
+After the model is converted to DWL, the compiler does a couple of diffrent optimizatintion and cleaning passes. It seams to register each pass in a function that i named Function_that_registers_optimization_passes(). Some examples of passes are "Lower cwise ops to scalar ops", "dwl check illigal ops" & "dwl normalize tensors". There is about 14 passes of optimization.
+
+When that is all done, some unknown mechanism converts from the mlir format to the bitstream that the TPU eats. It might be worth steping throgh the binary with the Ghidra debuger to see where and how that is managed. But I think i will leave that to someone else.
